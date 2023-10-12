@@ -1,0 +1,38 @@
+#hopper-tutorial {
+    position: absolute;
+    margin: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: black;
+    color: white;
+    font-family: Verdana, sans-serif;
+    width: 300px;
+    height: 420px;
+    padding: 20px;
+    border-radius: 10px;
+    opacity: 0.75;
+}
+
+.hopper-tutorial-title {
+    font-size: 1.5em;
+    display: block;
+    text-align: center;
+}
+
+.hopper-tutorial-content {
+    font-size: 1.0em;
+}
+
+.hopper-tutorial-close-btn {
+    display: block;
+    width: 50%;
+    padding: 5px;
+    margin: 20px auto 0px;
+    font-size: 1em;
+}
+
+.hopper-tutorial-content-list-elem {
+    padding: 4px;
+}

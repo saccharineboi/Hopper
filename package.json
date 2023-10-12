@@ -1,0 +1,21 @@
+{
+  "name": "hopper",
+  "version": "0.1.0",
+  "description": "A single-file WebGL 2.0 renderer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx uglifyjs src/renderer.js -o build/renderer.build.js",
+    "check": "npx eslint src/renderer.js",
+    "live": "npx live-server --no-browser"
+  },
+  "author": "saccharineboi",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "eslint": "^8.49.0",
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "uglify-js": "^3.17.4"
+  }
+}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Hopper Demo | Hello Cube 2</title>
+    <link rel="stylesheet" href="../styles/canvas.css">
+    <link rel="stylesheet" href="../styles/message.css">
+    <link rel="stylesheet" href="../styles/debug.css">
+    <link rel="stylesheet" href="../styles/loadscreen.css">
+    <link rel="apple-touch-icon" sizes="57x57" href="../resources/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="../resources/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="../resources/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="../resources/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="../resources/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="../resources/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="../resources/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="../resources/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../resources/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="../resources/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../resources/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="../resources/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../resources/favicon-16x16.png">
+    <link rel="manifest" href="../resources/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="../resources/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+</head>
+<body>
+    <canvas id="render-output"></canvas>
+    <pre id="render-message"></pre>
+    <div class="render-debug">
+        <div class="render-debug-container">
+            <h1 class="render-debug-header">Info</h1>
+            <p id="hopper-webgl-version" class="render-debug-info">WebGL version: </p>
+            <p id="hopper-webgl-debug-mode" class="render-debug-info">Debug mode: </p>
+            <p id="hopper-webgl-antialias" class="render-debug-info">Antialiasing: </p>
+            <p id="hopper-webgl-stencil" class="render-debug-info">Stencil: </p>
+            <p id="hopper-webgl-power" class="render-debug-info">Power preference: </p>
+            <p id="hopper-webgl-extension-count" class="render-debug-info">Extension count: </p>
+            <p id="hopper-webgl-vao" class="render-debug-info">VAO support: </p>
+            <p id="hopper-webgl-index-uint" class="render-debug-info">32-bit index support: </p>
+            <p id="hopper-webgl-anisotropy" class="render-debug-info">Anisotropy support: </p>
+            <p id="hopper-webgl-anisotropy-max" class="render-debug-info">Max anisotropy: 0</p>
+            <p id="hopper-webgl-fragment-shader-precision" class="render-debug-info">Fragment float precision: </p>
+            <p id="hopper-webgl-vertex-shader-precision" class="render-debug-info">Vertex float precision: </p>
+            <p id="hopper-webgl-max-texture-size" class="render-debug-info">Max texture size: </p>
+        </div>
+        <div class="render-debug-container">
+            <h1 class="render-debug-header">Performance</h1>
+            <p id="hopper-performance-real-ms" class="render-debug-info">Real ms: </p>
+            <p id="hopper-performance-real-fps" class="render-debug-info">Real fps: </p>
+            <p id="hopper-performance-effective-ms" class="render-debug-info">Effective ms: </p>
+            <p id="hopper-performance-effective-fps" class="render-debug-info">Effective fps: </p>
+        </div>
+    </div>
+    <h1 class="render-title">Hopper v0.1.0 | Hello Cube 2</h1>
+    <div id="hopper-loading-screen">
+        <p class="hopper-loading-screen-title">Hopper Engine</p>
+        <img src="../resources/hopper_logo_dark.png" width="256px" height="auto" class="hopper-logo">
+        <p class="hopper-loading-screen-message">Loading. Please wait.</p>
+    </div>
+    <script type="module">
+
+        import {Hopper} from "../src/renderer.js";
+
+        try {
+            const hopper = Hopper({
+                canvasID: "render-output",
+                enableDebug: true,
+                debugRefreshDelay: 1000,
+                forceWebGL1: false,
+                antialias: true,
+                stencil: true,
+                powerPreference: "high-performance",
+                failIfMajorPerformanceCaveat: true
+            });
+
+            const Common = hopper.Common;
+            const Vec2 = hopper.Vec2;
+            const Vec3 = hopper.Vec3;
+            const Vec4 = hopper.Vec4;
+            const Quat = hopper.Quat;
+            const Transform = hopper.Transform;
+            const Mat4 = hopper.Mat4;
+
+            hopper.enableDepth();
+            hopper.enableCulling();
+
+            hopper.clearColor(Vec4(0.2, 0.3, 0.3, 1.0));
+
+            const prog = hopper.createDoubleTextureProgram();
+            const cube = hopper.createCube(prog);
+
+            const texture2DLoader = hopper.createTexture2DLoader();
+            const texture0 = await texture2DLoader.loadCheckerboard({
+                brightColor: Vec4(200, 200, 200, 255),
+                darkColor: Vec4(50, 50, 50, 255),
+                minf: "nearest",
+                magf: "nearest",
+                wraps: "repeat",
+                wrapt: "repeat",
+                mipmap: false,
+                anisotropy: false
+            });
+            const texture1 = await texture2DLoader.load("../textures/wall.jpg", {
+                internalFormat: "rgb",
+                format: "rgb",
+                type: "uint8",
+                minf: "linear_mipmap_linear",
+                magf: "linear",
+                wraps: "repeat",
+                wrapt: "repeat",
+                mipmap: true,
+                anisotropy: true
+            });
+
+            prog.use();
+
+            hopper.turnOffLoadingScreen();
+
+            let rotY = 0;
+            hopper.render(dt => {
+                rotY += dt * 0.001;
+
+                hopper.resize();
+                hopper.clear();
+
+                const projection = Transform.perspective(Common.toRadians(90.0), hopper.getAspect(), 0.1, 100.0);
+                const view = Transform.lookAt(Vec3(0.0, 0.0, 2.0), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0));
+                const model = Transform.fromRotationTranslationScale(Quat().setAxisAngle(Vec3(1, 1, 1).norm(), rotY), Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0));
+
+                prog.updateProjection(projection);
+                prog.updateModelView(view.mul(model));
+
+                prog.updateColor(0, Vec4((Math.cos(rotY) + 1.0) * 0.5, (Math.sin(rotY) + 1.0) * 0.5, 0.5, 1.0));
+                prog.updateTexTransform(0, Vec2(0.0, rotY * 0.5));
+                prog.updateTexMultiplier(0, Vec2(2.0, 2.0));
+
+                prog.updateColor(1, Vec4(1.0, 1.0, 1.0, 1.0));
+                prog.updateTexTransform(1, Vec2(0.0, 0.0));
+                prog.updateTexMultiplier(1, Vec2(1.0, 1.0));
+
+                prog.updateMix((Math.sin(rotY) + 1.0) * 0.5);
+
+                prog.setTextures({
+                    texture0: texture0,
+                    texture1: texture1
+                });
+
+                cube.bind();
+                cube.draw();
+            });
+        }
+        catch (e) {
+            document.getElementById("hopper-loading-screen").style.display = "none";
+            document.getElementById("render-message").innerHTML = e.toString();
+            console.log(e.toString());
+        }
+
+    </script>
+</body>
+</html>

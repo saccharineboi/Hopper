@@ -1,0 +1,75 @@
+div {
+    margin: 0;
+    padding: 0;
+}
+
+@media (orientation: portrait) {
+    .render-debug {
+        display: none;
+    }
+}
+
+.render-title {
+    font-size: 0.75em;
+    position: absolute;
+    color: white;
+    left: 0;
+    right: 0;
+    top: 0;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    padding: 10px;
+    margin: 20px;
+}
+
+.render-title:hover, .render-title:active {
+    background-color: rgba(0, 0, 0, 0.75);
+    cursor: pointer;
+}
+
+.render-debug {
+    color: white;
+    position: absolute;
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin-top: 60px;
+}
+
+.render-debug-left {
+    color: white;
+    position: absolute;
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin-top: 60px;
+}
+
+.render-debug-right {
+    color: white;
+    position: absolute;
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin-top: 60px;
+    right: 0;
+}
+
+.render-debug-container {
+    margin: 20px;
+    padding: 10px 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+}
+
+.render-debug-container:hover, .render-debug-container:active {
+    background-color: rgba(0, 0, 0, 0.75);
+    cursor: pointer;
+}
+
+.render-debug-header {
+    font-size: 1em;
+}
+
+.render-debug-info {
+    font-size: 0.75em;
+}
