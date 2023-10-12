@@ -1,8 +1,9 @@
 <p align="center">
 <picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/saccharineboi/Hopper/assets/95090318/2dca96cf-83f6-4094-9167-2dab5c46bfeb">
- <source media="(prefers-color-scheme: light)" srcset="https://github.com/saccharineboi/Hopper/assets/95090318/d80bc00a-932f-4f43-890d-2026d1690a55">
- <img alt="Hopper Logo" width="256px" height="auto" src="https://github.com/saccharineboi/Hopper/assets/95090318/d80bc00a-932f-4f43-890d-2026d1690a55">
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/saccharineboi/Hopper/assets/95090318/993b6c3a-a248-4a06-b643-ff8da875a297">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/saccharineboi/Hopper/assets/95090318/a194a4de-e502-4eb1-8c6a-63ee048cb204">
+ <img alt="Hopper Logo" width="256px" height="auto" src="https://github.com/saccharineboi/Hopper/assets/95090318/a194a4de-e502-4eb1-8c6a-63ee048cb204">
+
 </picture>
 </p>
 <h1 align="center">Hopper</h1>
