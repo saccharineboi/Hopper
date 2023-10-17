@@ -490,6 +490,25 @@ const Quat = (x = 0, y = 0, z = 0, w = 1) => Object.freeze({
         w = _w;
     },
 
+    setInd: (ind, value) => {
+        switch (ind) {
+            case 0:
+                x = value;
+                break;
+            case 1:
+                y = value;
+                break;
+            case 2:
+                z = value;
+                break;
+            case 3:
+                w = value;
+                break;
+            default:
+                throw Exception(`Error: ${ind} is an invalid index for a Quat`);
+        }
+    },
+
     add: q => Quat(x + q.getX(), y + q.getY(), z + q.getZ(), w + q.getW()),
     sub: q => Quat(x - q.getX(), y - q.getY(), z - q.getZ(), w - q.getW()),
     mul: q => {
@@ -681,6 +700,7 @@ const Mat2 = (m00 = 1.0, m01 = 0.0,
         getInd: ind => data[ind],
         getData: () => data,
         set: (row, col, value) => data[2 * row + col] = value,
+        setInd: (ind, value) => data[ind] = value,
         setAll: (...values) => {
             data[0] = values[0];
             data[1] = values[1];
@@ -768,6 +788,7 @@ const Mat3 = (m00 = 1.0, m01 = 0.0, m02 = 0.0,
         getInd: ind => data[ind],
         getData: () => data,
         set: (row, col, value) => data[3 * row + col] = value,
+        setInd: (ind, value) => data[ind] = value,
         setAll: (...values) => {
             data[0] = values[0];
             data[1] = values[1];
@@ -909,6 +930,7 @@ const Mat4 = (m00 = 1.0, m01 = 0.0, m02 = 0.0, m03 = 0.0,
         getData: () => data,
         getInd: ind => data[ind],
         set: (row, col, value) => data[4 * row + col] = value,
+        setInd: (ind, value) => data[ind] = value,
         setAll: (...values) => {
             data[0]  = values[0];
             data[1]  = values[1];
@@ -1434,7 +1456,62 @@ const Transform = Object.freeze({
                     (a31 * b05 - a32 * b04 + a33 * b03) * invdet,
                     (a32 * b02 - a30 * b05 - a33 * b01) * invdet,
                     (a30 * b04 - a31 * b02 + a33 * b00) * invdet);
-    }
+    },
+    quatFromMat3: m => {
+        // See "Quaternion Calculus and Fast Animation" by Ken Shoemake (SIGGRAPH 1987)
+        const m0 = m.getInd(0), m1 = m.getInd(1), m2 = m.getInd(2),
+              m3 = m.getInd(3), m4 = m.getInd(4), m5 = m.getInd(5),
+              m6 = m.getInd(6), m7 = m.getInd(7), m8 = m.getInd(8);
+        const fTrace = m0 + m4 + m8;
+        if (fTrace > 0.0) {
+            const fRoot = Math.sqrt(fTrace + 1.0);
+            const fRoot2 = 0.5 / fRoot;
+            return Quat((m5 - m7) * fRoot2, (m6 - m2) * fRoot2, (m1 - m3) * fRoot2, 0.5 * fRoot);
+        }
+        let i = 0;
+        if (m4 > m0) {
+            i = 1;
+        }
+        if (m8 > m.getInd(i * 3 + i)) {
+            i = 2;
+        }
+        let j = (i + 1) % 3;
+        let k = (i + 2) % 3;
+        const fRoot = Math.sqrt(m.getInd(i * 3 + i) - m.getInd(j * 3 + j) - m.getInd(k * 3 + k) + 1.0);
+        const fRoot2 = 0.5 / fRoot;
+        const q = Quat();
+        q.setInd(i, 0.5 * fRoot);
+        q.setInd(j, (m.getInd(j * 3 + i) + m.getInd(i * 3 + j)) * fRoot2);
+        q.setInd(k, (m.getInd(k * 3 + i) + m.getInd(i * 3 + k)) * fRoot2)
+        q.setInd(3, (m.getInd(j * 3 + k) - m.getInd(k * 3 + j)) * fRoot2);
+        return q;
+    },
+    quatFromAxes: (xAxis, yAxis, zAxis) => {
+        const rotationMatrix = Mat3(xAxis.getX(), yAxis.getX(), zAxis.getX(),
+                                    xAxis.getY(), yAxis.getY(), zAxis.getY(),
+                                    xAxis.getZ(), yAxis.getZ(), zAxis.getZ());
+        return Transform.quatFromMat3(rotationMatrix);
+    },
+    quatFromRotationTo: (a, b) => {
+        const xUnitVec3 = Vec3(1.0, 0.0, 0.0);
+        const yUnitVec3 = Vec3(0.0, 1.0, 0.0);
+        const dot = a.dot(b);
+        if (dot < -0.999999) {
+            const tmpVec3 = xUnitVec3.cross(a);
+            if (tmpVec3.len() < 0.000001) {
+                tmpVec3.clone(yUnitVec3.cross(a));
+            }
+            tmpVec3.clone(tmpVec3.norm());
+            return Quat().setAxisAngle(tmpVec3, Math.PI);
+        }
+        else if (dot > 0.999999) {
+            return Quat();
+        }
+        else {
+            const tmpVec3 = a.cross(b);
+            return Quat(tmpVec3.getX(), tmpVec3.getY(), tmpVec3.getZ(), 1.0 + dot).norm();
+        }
+    },
 });
 
 //////////////////////////////////////////////////
@@ -1506,7 +1583,7 @@ const GEN_SHADER_PRECISION = gl => {
 };
 
 //////////////////////////////////////////////////
-const GEN_BASIC_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_BASIC_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_SHADER_VERT_ACOL_LOC, `vec3 ${SHADER_VERT_ACOL_NAME}`)}
@@ -1545,7 +1622,7 @@ const GEN_BASIC_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
 `;
 
 //////////////////////////////////////////////////
-const GEN_BASIC_COLOR_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_BASIC_COLOR_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_COLOR_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
 
@@ -1562,7 +1639,7 @@ const GEN_BASIC_COLOR_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(versi
 `;
 
 //////////////////////////////////////////////////
-const GEN_BASIC_TEXTURE_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_BASIC_TEXTURE_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_TEXTURE_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_TEXTURE_SHADER_VERT_ATEXCOORD_LOC, `vec2 ${SHADER_VERT_ATEXCOORD_NAME}`)}
@@ -1584,7 +1661,7 @@ const GEN_BASIC_TEXTURE_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(ver
 `;
 
 //////////////////////////////////////////////////
-const GEN_DOUBLE_TEXTURE_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_DOUBLE_TEXTURE_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, DOUBLE_TEXTURE_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
     ${GEN_SHADER_ATTRIBUTE(version, DOUBLE_TEXTURE_SHADER_VERT_ATEXCOORD_LOC, `vec2 ${SHADER_VERT_ATEXCOORD_NAME}`)}
@@ -1732,7 +1809,7 @@ const GEN_DOUBLE_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ve
 `;
 
 //////////////////////////////////////////////////
-const GEN_PHONG_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_PHONG_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, PHONG_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
     ${GEN_SHADER_ATTRIBUTE(version, PHONG_SHADER_VERT_ANORM_LOC, `vec3 ${SHADER_VERT_ANORM_NAME}`)}
@@ -1753,7 +1830,7 @@ const GEN_PHONG_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
 `;
 
 //////////////////////////////////////////////////
-const GEN_PHONG_TEXTURE_SHADER_VERT = (gl, version) => `${GEN_SHADER_VERSION(version)}
+const GEN_PHONG_TEXTURE_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, PHONG_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
     ${GEN_SHADER_ATTRIBUTE(version, PHONG_SHADER_VERT_ANORM_LOC, `vec3 ${SHADER_VERT_ANORM_NAME}`)}
@@ -3778,6 +3855,180 @@ const FPSCamera = ({
 };
 
 //////////////////////////////////////////////////
+const OrbitalCamera = ({
+    elemID,
+    position,
+    target,
+    rotationSpeed,
+    rotationSmoothing,
+    distanceDeltaMultiplier,
+    distanceSmoothing,
+    fovy,
+    near,
+    far,
+    aspectRatio,
+    enableDebug
+}) => {
+    let isActive = false;
+
+    const state = {
+        rollLeft: false,
+        rollRight: false
+    };
+
+    const bindings = {
+        rollLeft: "KeyA",
+        rollRight: "KeyD"
+    };
+
+    const projectionMatrix = Transform.perspective(fovy, aspectRatio, near, far);
+    const viewMatrix = Mat4();
+
+    const staticDirection = target.sub(position).norm();
+
+    let distanceMultiplier = 1.0;
+    let nextDistanceMultiplier = distanceMultiplier;
+    document.addEventListener("wheel", e => {
+        if (isActive) {
+            nextDistanceMultiplier += e.deltaY * distanceDeltaMultiplier;
+        }
+    });
+
+    document.addEventListener("keydown", e => {
+        if (e.code === bindings.rollLeft) {
+            state.rollLeft = true;
+            state.rollRight = false;
+        }
+        else if (e.code === bindings.rollRight) {
+            state.rollLeft = false;
+            state.rollRight = true;
+        }
+    });
+
+    document.addEventListener("keyup", e => {
+        if (e.code === bindings.rollLeft) {
+            state.rollLeft = false;
+        }
+        else if (e.code === bindings.rollRight) {
+            state.rollRight = false;
+        }
+    });
+
+    const orientation = Quat();
+    const nextOrientation = orientation.copy();
+    document.addEventListener("mousemove", e => {
+        if (isActive) {
+            const deltaX = e.movementX;
+            const deltaY = e.movementY;
+            nextOrientation.clone(nextOrientation.rotateY(Common.toRadians(-deltaX * rotationSpeed))
+                                                 .rotateX(Common.toRadians(-deltaY * rotationSpeed)));
+        }
+    });
+
+    const elem = document.getElementById(elemID);
+    if (!elem) {
+        throw Exception(`${elemID} not found`);
+    }
+    elem.requestPointerLock = elem.requestPointerLock ||
+                              elem.mozRequestPointerLock;
+    elem.onclick = () => elem.requestPointerLock();
+    const lockChangeListener = () => {
+        if (document.pointerLockElement === elem ||
+            document.mozPointerLockElement === elem) {
+            isActive = true;
+        }
+        else {
+            isActive = false;
+        }
+    };
+    document.addEventListener("pointerlockchange", lockChangeListener);
+    document.addEventListener("mozpointerlockchange", lockChangeListener);
+
+    const debugElements = enableDebug ? Object.freeze({
+        position: document.getElementById("hopper-camera-position"),
+        direction: document.getElementById("hopper-camera-direction"),
+        target: document.getElementById("hopper-camera-target"),
+        orientation: document.getElementById("hopper-camera-orientation"),
+        rotationSpeed: document.getElementById("hopper-camera-rotation-speed"),
+        rotationSmoothing: document.getElementById("hopper-camera-rotation-smoothing"),
+        distanceDeltaMultiplier: document.getElementById("hopper-camera-distance-delta-multiplier"),
+        distanceSmoothing: document.getElementById("hopper-camera-distance-smoothing"),
+        fovy: document.getElementById("hopper-camera-fovy"),
+        near: document.getElementById("hopper-camera-near"),
+        far: document.getElementById("hopper-camera-far"),
+        aspect: document.getElementById("hopper-camera-aspect")
+    }) : null;
+
+    return Object.freeze({
+        getElemID: () => elemID,
+        getPosition: () => position,
+        getTarget: () => target,
+        getRotationSpeed: () => rotationSpeed,
+        getRotationSmoothing: () => rotationSmoothing,
+        getDistanceDeltaMultiplier: () => distanceDeltaMultiplier,
+        getDistanceSmoothing: () => distanceSmoothing,
+        getFovy: () => fovy,
+        getNear: () => near,
+        getFar: () => far,
+        getAspectRatio: () => aspectRatio,
+
+        getIsActive: () => isActive,
+
+        setPosition: v => position.clone(v),
+        setTarget: v => target.clone(v),
+        setRotationSpeed: s => rotationSpeed = s,
+        setRotationSmoothing: s => rotationSmoothing = s,
+        setDistanceDeltaMultiplier: s => distanceDeltaMultiplier = s,
+        setDistanceSmoothing: s => distanceSmoothing = s,
+        setFovy: s => fovy = s,
+        setNear: s => near = s,
+        setFar: s => far = s,
+        setAspectRatio: s => aspectRatio = s,
+
+        update: dt => {
+            const distance = target.sub(position).len();
+            const rotationMatrix = Transform.mat4FromQuat(orientation);
+            const direction = rotationMatrix.mulVec3(staticDirection);
+            const nextPosition = target.sub(direction.scale(distance));
+
+            if (isActive) {
+                if (state.rollLeft) {
+                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(dt * rotationSpeed)));
+                }
+                else if (state.rollRight) {
+                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(-dt * rotationSpeed)));
+                }
+            }
+
+            projectionMatrix.clone(Transform.perspective(fovy, aspectRatio, near, far));
+            viewMatrix.clone(Transform.mat4FromQuat(orientation.inv()).mul(Transform.mat4FromTranslation(nextPosition.scale(distanceMultiplier).negate())));
+
+            orientation.clone(orientation.slerp(nextOrientation.norm(), dt * rotationSmoothing));
+            distanceMultiplier = distanceMultiplier + dt * (nextDistanceMultiplier - distanceMultiplier) * distanceSmoothing;
+            position.clone(nextPosition);
+
+            if (enableDebug) {
+                debugElements.position.innerHTML = `Position: ${position.scale(distanceMultiplier).toString()}`;
+                debugElements.direction.innerHTML = `Direction: ${direction.toString()}`;
+                debugElements.target.innerHTML = `Target: ${target.toString()}`;
+                debugElements.orientation.innerHTML = `Orientation: ${orientation.toString()}`;
+                debugElements.rotationSpeed.innerHTML = `Rotation speed: ${rotationSpeed.toFixed(2)}`;
+                debugElements.rotationSmoothing.innerHTML = `Rotation smoothing: ${rotationSmoothing.toFixed(2)}`;
+                debugElements.distanceDeltaMultiplier.innerHTML = `Distance delta multiplier: ${distanceDeltaMultiplier.toFixed(2)}`;
+                debugElements.distanceSmoothing.innerHTML = `Distance smoothing: ${distanceSmoothing.toFixed(2)}`;
+                debugElements.fovy.innerHTML = `Vertical field of view: ${Common.toDegrees(fovy).toFixed(2)}`;
+                debugElements.near.innerHTML = `Near: ${near.toFixed(2)}`;
+                debugElements.far.innerHTML = `Far: ${far.toFixed(2)}`;
+                debugElements.aspect.innerHTML = `Aspect ratio: ${aspectRatio.toFixed(2)}`;
+            }
+        },
+
+        getProjectionMatrix: () => projectionMatrix,
+        getViewMatrix: () => viewMatrix
+    });
+};
+
+//////////////////////////////////////////////////
 const DebugUI = ({
     refreshDelay,
     webglVersion,
@@ -4103,7 +4354,7 @@ const Hopper = ({
         getAspect: () => canvas.getAspect(),
 
         createBasicProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_BASIC_SHADER_FRAG(gl, version)));
 
             return Object.freeze({
@@ -4117,7 +4368,7 @@ const Hopper = ({
         },
 
         createBasicColorProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_COLOR_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_COLOR_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_BASIC_COLOR_SHADER_FRAG(gl, version)));
             if (version === 2) {
                 prog.use();
@@ -4152,7 +4403,7 @@ const Hopper = ({
         },
 
         createBasicTextureProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_TEXTURE_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_TEXTURE_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_BASIC_TEXTURE_SHADER_FRAG(gl, version)));
 
             prog.use();
@@ -4196,7 +4447,7 @@ const Hopper = ({
         },
 
         createDoubleTextureProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_DOUBLE_TEXTURE_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_DOUBLE_TEXTURE_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_DOUBLE_TEXTURE_SHADER_FRAG(gl, version)));
 
             prog.use();
@@ -4244,7 +4495,7 @@ const Hopper = ({
         },
 
         createPhongProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_PHONG_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_PHONG_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_PHONG_SHADER_FRAG(gl, version)));
             if (version === 2) {
                 prog.use();
@@ -4346,7 +4597,7 @@ const Hopper = ({
         },
 
         createPhongTextureProgram: () => {
-            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_PHONG_TEXTURE_SHADER_VERT(gl, version)),
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_PHONG_TEXTURE_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_PHONG_TEXTURE_SHADER_FRAG(gl, version)));
             prog.use();
             if (version === 2) {
@@ -5502,6 +5753,29 @@ const Hopper = ({
                                                           aspectRatio: aspectRatio,
                                                           enableDebug: enableDebug }),
 
+        createOrbitalCamera: ({ elemID,
+                                position,
+                                target,
+                                rotationSpeed,
+                                rotationSmoothing,
+                                distanceDeltaMultiplier,
+                                distanceSmoothing,
+                                fovy,
+                                near,
+                                far,
+                                aspectRatio,
+                                enableDebug }) => OrbitalCamera({ elemID: elemID,
+                                                                  position: position,
+                                                                  target: target,
+                                                                  rotationSpeed: rotationSpeed,
+                                                                  rotationSmoothing: rotationSmoothing,
+                                                                  distanceDeltaMultiplier: distanceDeltaMultiplier,
+                                                                  distanceSmoothing: distanceSmoothing,
+                                                                  fovy: fovy,
+                                                                  near: near,
+                                                                  far: far,
+                                                                  aspectRatio: aspectRatio,
+                                                                  enableDebug: enableDebug })
     });
 };
 
