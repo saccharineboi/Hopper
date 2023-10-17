@@ -1,10 +1,9 @@
 #render-message {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     color: whitesmoke;
-    font-size: 1em;
+    font-size: 2em;
     white-space: pre-wrap;
     word-wrap: break-word;
+    z-index: 99;
+    text-align: center;
 }
