@@ -118,7 +118,9 @@
         }
         catch (e) {
             document.getElementById("hopper-loading-screen").style.display = "none";
-            document.getElementById("render-message").innerHTML = e.toString();
+            const renderMessageElem = document.getElementById("render-message");
+            renderMessageElem.style.display = "block";
+            renderMessageElem.innerHTML = e.toString();
             console.log(e.toString());
         }
 
