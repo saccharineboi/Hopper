@@ -3077,21 +3077,23 @@ const Texture2D = (gl, version, data,
         gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
     }
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magf);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wraps);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapt);
     if (mipmap) {
         if (version === 1 && Common.isPowerOfTwo(width) && Common.isPowerOfTwo(height)) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wraps);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapt);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
             gl.generateMipmap(gl.TEXTURE_2D);
         }
         else if (version === 2) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wraps);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapt);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
             gl.generateMipmap(gl.TEXTURE_2D);
         }
         else {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         }
     }
     else if (minf) {
@@ -3135,7 +3137,87 @@ const Texture2D = (gl, version, data,
 };
 
 //////////////////////////////////////////////////
-const Texture2DLoader = (gl, version) => {
+const Cubemap = (gl, version,
+                { width, height, internalFormat, format, type, anisotropy }, imageBuffer) => {
+
+    const uploadImage = (target, data) => {
+        if (data instanceof Image) {
+            gl.texImage2D(target, 0, internalFormat, format, type, data);
+        }
+        else {
+            gl.texImage2D(target, 0, internalFormat, width, height, 0, format, type, data);
+        }
+    };
+
+    const id = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, id);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    for (const image of imageBuffer) {
+        switch (image.face) {
+            case "positive_x":
+                uploadImage(gl.TEXTURE_CUBE_MAP_POSITIVE_X, image.data);
+                break;
+            case "negative_x":
+                uploadImage(gl.TEXTURE_CUBE_MAP_NEGATIVE_X, image.data);
+                break;
+            case "positive_y":
+                uploadImage(gl.TEXTURE_CUBE_MAP_POSITIVE_Y, image.data);
+                break;
+            case "negative_y":
+                uploadImage(gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, image.data);
+                break;
+            case "positive_z":
+                uploadImage(gl.TEXTURE_CUBE_MAP_POSITIVE_Z, image.data);
+                break;
+            case "negative_z":
+                uploadImage(gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, image.data);
+                break;
+            default:
+                throw Exception(`${image.face} is an invalid face for cubemap`);
+        }
+    }
+    if (version === 1 && Common.isPowerOfTwo(width) && Common.isPowerOfTwo(height)) {
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.generateMipmap();
+    }
+    else if (version === 2) {
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.generateMipmap();
+    }
+    else {
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+    const ext = gl.getExtension("EXT_texture_filter_anisotropic") ||
+                gl.getExtension("MOZ_EXT_texture_filter_anisotropic") ||
+                gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+    if (ext) {
+        const maxAnisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        if (anisotropy && anisotropy < maxAnisotropy) {
+            gl.texParameterf(gl.TEXTURE_CUBE_MAP, ext.TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
+        }
+        else {
+            gl.texParameterf(gl.TEXTURE_CUBE_MAP, ext.TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy);
+        }
+    }
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    return Object.freeze({
+        getID: () => id,
+        getVersion: () => version,
+        getWidth: () => width,
+        getHeight: () => height,
+        getInternalFormat: () => internalFormat,
+        getFormat: () => format,
+        getType: () => type,
+        bind: () => gl.bindTexture(gl.TEXTURE_CUBE_MAP, id),
+        unbind: () => gl.bindTexture(gl.TEXTURE_CUBE_MAP, null)
+    });
+};
+
+//////////////////////////////////////////////////
+const TextureLoader = (gl, version) => {
     const loadedTextures = new Map();
 
     const loadImage = url => new Promise((resolve, reject) => {
@@ -3224,7 +3306,7 @@ const Texture2DLoader = (gl, version) => {
     };
 
     return Object.freeze({
-        load: async (url, {
+        load2D: async (url, {
             internalFormat,
             format,
             type,
@@ -3250,7 +3332,7 @@ const Texture2DLoader = (gl, version) => {
                 anisotropy: anisotropy
             });
         },
-        loadCheckerboard: ({
+        loadCheckerboard2D: ({
             darkColor,
             brightColor,
             minf,
@@ -3280,7 +3362,7 @@ const Texture2DLoader = (gl, version) => {
                 anisotropy: anisotropy
             });
         },
-        loadSingleColor: ({
+        loadSingleColor2D: ({
             color,
             minf,
             magf,
@@ -3305,6 +3387,29 @@ const Texture2DLoader = (gl, version) => {
                 mipmap: mipmap,
                 anisotropy: anisotropy
             });
+        },
+        loadCubemap: async ({
+            internalFormat,
+            format,
+            type,
+            anisotropy
+        }, ...imageBuffer) => {
+            let width = null, height = null;
+            for (const image of imageBuffer) {
+                image.data = await __load(image.url);
+                if (!width || !height) {
+                    width = image.data.width;
+                    height = image.data.height;
+                }
+            }
+            return Cubemap(gl, version, {
+                width: width,
+                height: height,
+                internalFormat: tokenizeFormat(internalFormat),
+                format: tokenizeFormat(format),
+                type: tokenizeType(type),
+                anisotropy: anisotropy
+            }, ...imageBuffer);
         }
     });
 };
@@ -4756,7 +4861,7 @@ const Hopper = ({
             });
         },
 
-        createTexture2DLoader: () => Texture2DLoader(gl, version),
+        createTextureLoader: () => TextureLoader(gl, version),
 
         createColoredTriangle: program => {
             const vertices = new Float32Array([
