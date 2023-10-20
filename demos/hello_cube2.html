@@ -92,8 +92,8 @@
             const prog = hopper.createDoubleTextureProgram();
             const cube = hopper.createCube(prog);
 
-            const texture2DLoader = hopper.createTexture2DLoader();
-            const texture0 = await texture2DLoader.loadCheckerboard({
+            const textureLoader = hopper.createTextureLoader();
+            const texture0 = await textureLoader.loadCheckerboard2D({
                 brightColor: Vec4(200, 200, 200, 255),
                 darkColor: Vec4(50, 50, 50, 255),
                 minf: "nearest",
@@ -103,7 +103,7 @@
                 mipmap: false,
                 anisotropy: false
             });
-            const texture1 = await texture2DLoader.load("../textures/wall.jpg", {
+            const texture1 = await textureLoader.load2D("../textures/wall.jpg", {
                 internalFormat: "rgb",
                 format: "rgb",
                 type: "uint8",

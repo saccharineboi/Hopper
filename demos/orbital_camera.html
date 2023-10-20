@@ -140,8 +140,8 @@
                 enableDebug: true
             });
 
-            const texture2DLoader = hopper.createTexture2DLoader();
-            const floorTexture = texture2DLoader.loadCheckerboard({
+            const textureLoader = hopper.createTextureLoader();
+            const floorTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(50, 50, 50, 1.0),
                 brightColor: Vec4(200, 200, 200, 1.0),
                 minf: "nearest",
@@ -151,7 +151,7 @@
                 mipmap: false,
                 anisotropy: 0
             });
-            const cubeTexture = texture2DLoader.loadCheckerboard({
+            const cubeTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(25, 50, 75, 1.0),
                 brightColor: Vec4(200, 220, 240, 1.0),
                 minf: "nearest",
@@ -161,7 +161,7 @@
                 mipmap: false,
                 anisotropy: 0
             });
-            const sphereTexture = texture2DLoader.loadCheckerboard({
+            const sphereTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(75, 50, 25, 1.0),
                 brightColor: Vec4(240, 220, 200, 1.0),
                 minf: "nearest",
@@ -171,7 +171,7 @@
                 mipmap: false,
                 anisotropy: 0
             });
-            const prismTexture = texture2DLoader.loadCheckerboard({
+            const prismTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(25, 75, 25),
                 brightColor: Vec4(180, 220, 180),
                 minf: "nearest",

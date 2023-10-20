@@ -85,9 +85,9 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
-            const texture2DLoader = hopper.createTexture2DLoader();
+            const textureLoader = hopper.createTextureLoader();
 
-            const ambientTexture = await texture2DLoader.load("../textures/8081_earthlights4k.jpg", {
+            const ambientTexture = await textureLoader.load2D("../textures/8081_earthlights4k.jpg", {
                 internalFormat: "rgb",
                 format: "rgb",
                 type: "uint8",
@@ -99,7 +99,7 @@
                 anisotropy: 16
             });
 
-            const diffuseTexture = await texture2DLoader.load("../textures/8081_earthmap4k.jpg", {
+            const diffuseTexture = await textureLoader.load2D("../textures/8081_earthmap4k.jpg", {
                 internalFormat: "rgb",
                 format: "rgb",
                 type: "uint8",
@@ -111,7 +111,7 @@
                 anisotropy: 16
             });
 
-            const specularTexture = await texture2DLoader.load("../textures/8081_earthspec4k.jpg", {
+            const specularTexture = await textureLoader.load2D("../textures/8081_earthspec4k.jpg", {
                 internalFormat: "rgb",
                 format: "rgb",
                 type: "uint8",

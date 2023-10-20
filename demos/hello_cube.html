@@ -92,8 +92,8 @@
             const prog = hopper.createBasicTextureProgram();
             const cube = hopper.createCube(prog);
 
-            const texture2DLoader = hopper.createTexture2DLoader();
-            const texture = await texture2DLoader.loadCheckerboard({
+            const textureLoader = hopper.createTextureLoader();
+            const texture = await textureLoader.loadCheckerboard2D({
                 brightColor: Vec4(200, 200, 200, 255),
                 darkColor: Vec4(50, 50, 50, 255),
                 minf: "nearest",
