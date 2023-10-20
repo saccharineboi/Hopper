@@ -185,7 +185,8 @@
             hopper.enableDepth();
             hopper.enableCulling();
 
-            hopper.clearColor(Vec4(0.2, 0.3, 0.3, 1.0));
+            const clearColor = Vec4(0.2, 0.3, 0.3, 1.0);
+            hopper.clearColor(clearColor);
 
             const phongProgram = hopper.createPhongTextureProgram();
             const basicColorProgram = hopper.createBasicColorProgram();
@@ -195,6 +196,13 @@
             const sphere = hopper.createCubeSphere(phongProgram, 1.0, 3);
             const prism = hopper.createPrism(phongProgram, 0.5, 0.5, 2.0, 30, 30);
             const ball = hopper.createIcoSphere(basicColorProgram, 0.5, 3);
+
+            hopper.bindFogUBO();
+            hopper.setFog({ color: clearColor,
+                            distance: 5.0,
+                            intensity: 1.0,
+                            power: 1.0 });
+            hopper.unbindFogUBO();
 
             hopper.bindPhongMaterialUBO();
             hopper.setPhongMaterial({ ambient: Vec3(1.0, 1.0, 1.0),
