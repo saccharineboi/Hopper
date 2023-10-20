@@ -61,11 +61,15 @@
             <p id="hopper-camera-position" class="render-debug-info">Position: </p>
             <p id="hopper-camera-direction" class="render-debug-info">Direction: </p>
             <p id="hopper-camera-target" class="render-debug-info">Target: </p>
+            <p id="hopper-camera-up" class="render-debug-info">Up: </p>
             <p id="hopper-camera-orientation" class="render-debug-info">Orientation: </p>
             <p id="hopper-camera-rotation-speed" class="render-debug-info">Rotation speed: </p>
             <p id="hopper-camera-rotation-smoothing" class="render-debug-info">Rotation smoothing: </p>
             <p id="hopper-camera-distance-delta-multiplier" class="render-debug-info">Distance delta multiplier: </p>
+            <p id="hopper-camera-distance-delta-multiplier-min" class="render-debug-info">Minimum distance delta multiplier: </p>
+            <p id="hopper-camera-distance-delta-multiplier-max" class="render-debug-info">Maximum distance delta multiplier: </p>
             <p id="hopper-camera-distance-smoothing" class="render-debug-info">Distance smoothing: </p>
+            <p id="hopper-camera-roll-speed" class="render-debug-info">Roll speed: </p>
             <p id="hopper-camera-fovy" class="render-debug-info">Vertical field of view: </p>
             <p id="hopper-camera-near" class="render-debug-info">Near: </p>
             <p id="hopper-camera-far" class="render-debug-info">Far: </p>
@@ -121,10 +125,14 @@
                 elemID: "render-output",
                 position: Vec3(0, 2, 5),
                 target: Vec3(0, 0, 0),
+                up: Vec3(0, 1, 0),
                 rotationSpeed: 0.05,
                 rotationSmoothing: 0.01,
                 distanceDeltaMultiplier: 0.001,
+                minDistanceMultiplier: 0.5,
+                maxDistanceMultiplier: 3.0,
                 distanceSmoothing: 0.01,
+                rollSpeed: 0.1,
                 fovy: Common.toRadians(90.0),
                 near: 0.3,
                 far: 1000.0,

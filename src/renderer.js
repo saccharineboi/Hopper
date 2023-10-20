@@ -3859,10 +3859,14 @@ const OrbitalCamera = ({
     elemID,
     position,
     target,
+    up,
     rotationSpeed,
     rotationSmoothing,
     distanceDeltaMultiplier,
+    minDistanceMultiplier,
+    maxDistanceMultiplier,
     distanceSmoothing,
+    rollSpeed,
     fovy,
     near,
     far,
@@ -3891,6 +3895,12 @@ const OrbitalCamera = ({
     document.addEventListener("wheel", e => {
         if (isActive) {
             nextDistanceMultiplier += e.deltaY * distanceDeltaMultiplier;
+            if (nextDistanceMultiplier < minDistanceMultiplier) {
+                nextDistanceMultiplier = minDistanceMultiplier;
+            }
+            else if (nextDistanceMultiplier > maxDistanceMultiplier) {
+                nextDistanceMultiplier = maxDistanceMultiplier;
+            }
         }
     });
 
@@ -3948,11 +3958,15 @@ const OrbitalCamera = ({
         position: document.getElementById("hopper-camera-position"),
         direction: document.getElementById("hopper-camera-direction"),
         target: document.getElementById("hopper-camera-target"),
+        up: document.getElementById("hopper-camera-up"),
         orientation: document.getElementById("hopper-camera-orientation"),
         rotationSpeed: document.getElementById("hopper-camera-rotation-speed"),
         rotationSmoothing: document.getElementById("hopper-camera-rotation-smoothing"),
         distanceDeltaMultiplier: document.getElementById("hopper-camera-distance-delta-multiplier"),
+        distanceDeltaMultiplierMin: document.getElementById("hopper-camera-distance-delta-multiplier-min"),
+        distanceDeltaMultiplierMax: document.getElementById("hopper-camera-distance-delta-multiplier-max"),
         distanceSmoothing: document.getElementById("hopper-camera-distance-smoothing"),
+        rollSpeed: document.getElementById("hopper-camera-roll-speed"),
         fovy: document.getElementById("hopper-camera-fovy"),
         near: document.getElementById("hopper-camera-near"),
         far: document.getElementById("hopper-camera-far"),
@@ -3963,10 +3977,12 @@ const OrbitalCamera = ({
         getElemID: () => elemID,
         getPosition: () => position,
         getTarget: () => target,
+        getUp: () => up,
         getRotationSpeed: () => rotationSpeed,
         getRotationSmoothing: () => rotationSmoothing,
         getDistanceDeltaMultiplier: () => distanceDeltaMultiplier,
         getDistanceSmoothing: () => distanceSmoothing,
+        getRollSpeed: () => rollSpeed,
         getFovy: () => fovy,
         getNear: () => near,
         getFar: () => far,
@@ -3976,10 +3992,12 @@ const OrbitalCamera = ({
 
         setPosition: v => position.clone(v),
         setTarget: v => target.clone(v),
+        setUp: v => up.clone(v),
         setRotationSpeed: s => rotationSpeed = s,
         setRotationSmoothing: s => rotationSmoothing = s,
         setDistanceDeltaMultiplier: s => distanceDeltaMultiplier = s,
         setDistanceSmoothing: s => distanceSmoothing = s,
+        setRollSpeed: s => rollSpeed = s,
         setFovy: s => fovy = s,
         setNear: s => near = s,
         setFar: s => far = s,
@@ -3988,20 +4006,21 @@ const OrbitalCamera = ({
         update: dt => {
             const distance = target.sub(position).len();
             const rotationMatrix = Transform.mat4FromQuat(orientation);
+            const newUp = rotationMatrix.mulVec3(up);
             const direction = rotationMatrix.mulVec3(staticDirection);
             const nextPosition = target.sub(direction.scale(distance));
 
             if (isActive) {
                 if (state.rollLeft) {
-                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(dt * rotationSpeed)));
+                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(dt * rollSpeed)));
                 }
                 else if (state.rollRight) {
-                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(-dt * rotationSpeed)));
+                    nextOrientation.clone(nextOrientation.rotateZ(Common.toRadians(-dt * rollSpeed)));
                 }
             }
 
             projectionMatrix.clone(Transform.perspective(fovy, aspectRatio, near, far));
-            viewMatrix.clone(Transform.mat4FromQuat(orientation.inv()).mul(Transform.mat4FromTranslation(nextPosition.scale(distanceMultiplier).negate())));
+            viewMatrix.clone(Transform.lookAt(position.scale(distanceMultiplier), target, newUp));
 
             orientation.clone(orientation.slerp(nextOrientation.norm(), dt * rotationSmoothing));
             distanceMultiplier = distanceMultiplier + dt * (nextDistanceMultiplier - distanceMultiplier) * distanceSmoothing;
@@ -4011,11 +4030,15 @@ const OrbitalCamera = ({
                 debugElements.position.innerHTML = `Position: ${position.scale(distanceMultiplier).toString()}`;
                 debugElements.direction.innerHTML = `Direction: ${direction.toString()}`;
                 debugElements.target.innerHTML = `Target: ${target.toString()}`;
+                debugElements.up.innerHTML = `Up: ${newUp.toString()}`;
                 debugElements.orientation.innerHTML = `Orientation: ${orientation.toString()}`;
                 debugElements.rotationSpeed.innerHTML = `Rotation speed: ${rotationSpeed.toFixed(2)}`;
                 debugElements.rotationSmoothing.innerHTML = `Rotation smoothing: ${rotationSmoothing.toFixed(2)}`;
                 debugElements.distanceDeltaMultiplier.innerHTML = `Distance delta multiplier: ${distanceDeltaMultiplier.toFixed(2)}`;
+                debugElements.distanceDeltaMultiplierMin.innerHTML = `Minimum distance delta multiplier: ${minDistanceMultiplier.toFixed(2)}`;
+                debugElements.distanceDeltaMultiplierMax.innerHTML = `Maximum distance delta multiplier: ${maxDistanceMultiplier.toFixed(2)}`;
                 debugElements.distanceSmoothing.innerHTML = `Distance smoothing: ${distanceSmoothing.toFixed(2)}`;
+                debugElements.rollSpeed.innerHTML = `Roll speed: ${rollSpeed.toFixed(2)}`;
                 debugElements.fovy.innerHTML = `Vertical field of view: ${Common.toDegrees(fovy).toFixed(2)}`;
                 debugElements.near.innerHTML = `Near: ${near.toFixed(2)}`;
                 debugElements.far.innerHTML = `Far: ${far.toFixed(2)}`;
@@ -5756,10 +5779,14 @@ const Hopper = ({
         createOrbitalCamera: ({ elemID,
                                 position,
                                 target,
+                                up,
                                 rotationSpeed,
                                 rotationSmoothing,
                                 distanceDeltaMultiplier,
+                                minDistanceMultiplier,
+                                maxDistanceMultiplier,
                                 distanceSmoothing,
+                                rollSpeed,
                                 fovy,
                                 near,
                                 far,
@@ -5767,10 +5794,14 @@ const Hopper = ({
                                 enableDebug }) => OrbitalCamera({ elemID: elemID,
                                                                   position: position,
                                                                   target: target,
+                                                                  up: up,
                                                                   rotationSpeed: rotationSpeed,
                                                                   rotationSmoothing: rotationSmoothing,
                                                                   distanceDeltaMultiplier: distanceDeltaMultiplier,
+                                                                  minDistanceMultiplier: minDistanceMultiplier,
+                                                                  maxDistanceMultiplier: maxDistanceMultiplier,
                                                                   distanceSmoothing: distanceSmoothing,
+                                                                  rollSpeed: rollSpeed,
                                                                   fovy: fovy,
                                                                   near: near,
                                                                   far: far,
