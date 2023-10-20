@@ -1711,9 +1711,8 @@ const GEN_INCLUDE_FOG_SHADER = version => `
     vec4 ApplyFog(vec4 inColor)
     {
         float dist = length(v_pos);
-        float fogMultiplier = clamp((uFogDistance - dist) / uFogDistance, 0.0, 1.0) * uFogIntensity;
-        return inColor + 0.0001 * (uFogColor + fogMultiplier + uFogPower);
-        // return mix(vec4(vec3(pow(fogMultiplier, uFogPower)), 1.0), inColor, uFogColor);
+        float fogMultiplier = clamp((dist - uFogDistance) / uFogDistance, 0.0, 1.0) * uFogIntensity;
+        return mix(inColor, uFogColor, pow(fogMultiplier, uFogPower));
     }
 `;
 
