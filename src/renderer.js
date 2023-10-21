@@ -2203,6 +2203,103 @@ const GEN_PHONG_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
 `;
 
 //////////////////////////////////////////////////
+const GEN_CUBEMAP_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
+
+#if __VERSION__ == 300
+    // assuming right-handed coordinate system
+    const vec3 positions[36] = vec3[](
+        // front face
+        vec3(-1.0, -1.0, -1.0),
+        vec3( 1.0, -1.0, -1.0),
+        vec3( 1.0,  1.0, -1.0),
+
+        vec3( 1.0,  1.0, -1.0),
+        vec3(-1.0,  1.0, -1.0),
+        vec3(-1.0, -1.0, -1.0),
+
+        // back face
+        vec3(-1.0, -1.0, 1.0),
+        vec3(-1.0,  1.0, 1.0),
+        vec3( 1.0,  1.0, 1.0),
+
+        vec3( 1.0,  1.0, 1.0),
+        vec3( 1.0, -1.0, 1.0),
+        vec3(-1.0, -1.0, 1.0),
+
+        // left face
+        vec3(-1.0, -1.0,  1.0),
+        vec3(-1.0, -1.0, -1.0),
+        vec3(-1.0,  1.0, -1.0),
+
+        vec3(-1.0,  1.0, -1.0),
+        vec3(-1.0,  1.0,  1.0),
+        vec3(-1.0, -1.0,  1.0),
+
+        // right face
+        vec3(1.0, -1.0, -1.0),
+        vec3(1.0, -1.0,  1.0),
+        vec3(1.0,  1.0,  1.0),
+
+        vec3(1.0,  1.0,  1.0),
+        vec3(1.0,  1.0, -1.0),
+        vec3(1.0, -1.0, -1.0),
+
+        // top face
+        vec3(-1.0, 1.0,  1.0),
+        vec3(-1.0, 1.0, -1.0),
+        vec3( 1.0, 1.0, -1.0),
+
+        vec3( 1.0, 1.0, -1.0),
+        vec3( 1.0, 1.0,  1.0),
+        vec3(-1.0, 1.0,  1.0),
+
+        // bottom face
+        vec3(-1.0, -1.0,  1.0),
+        vec3( 1.0, -1.0,  1.0),
+        vec3( 1.0, -1.0, -1.0),
+
+        vec3( 1.0, -1.0, -1.0),
+        vec3(-1.0, -1.0, -1.0),
+        vec3(-1.0, -1.0,  1.0)
+    );
+#endif
+
+    ${GEN_SHADER_VARYING_OUT(version, "vec3 v_texcoord")}
+
+    uniform mat4 uProjection;
+    uniform mat4 uView;
+
+    void main()
+    {
+        vec4 output_pos = uProjection * mat4(mat3(uView)) * vec4(positions[gl_VertexID], 1.0);
+        v_texcoord = positions[gl_VertexID];
+        gl_Position = output_pos.xyww;
+    }
+`;
+
+//////////////////////////////////////////////////
+const GEN_CUBEMAP_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
+
+    ${GEN_SHADER_PRECISION(gl)}
+
+    ${GEN_SHADER_VARYING_IN(version, "vec3 v_texcoord")}
+
+    uniform samplerCube uCubemap;
+
+#if __VERSION__ == 300
+    out vec4 output_color;
+#endif
+    void main()
+    {
+#if __VERSION__ == 300
+        output_color = texture(uCubemap, v_texcoord);
+#elif __VERSION__ == 100
+        gl_FragColor = textureCube(uCubemap, v_texcoord);
+#endif
+    }
+`;
+
+//////////////////////////////////////////////////
 const Shader = (gl, type, source) => {
     const id = gl.createShader(type);
     gl.shaderSource(id, source);
@@ -3138,7 +3235,7 @@ const Texture2D = (gl, version, data,
 
 //////////////////////////////////////////////////
 const Cubemap = (gl, version,
-                { width, height, internalFormat, format, type, anisotropy }, imageBuffer) => {
+                { width, height, internalFormat, format, type, anisotropy }, ...imageBuffer) => {
 
     const uploadImage = (target, data) => {
         if (data instanceof Image) {
@@ -3181,11 +3278,11 @@ const Cubemap = (gl, version,
     }
     if (version === 1 && Common.isPowerOfTwo(width) && Common.isPowerOfTwo(height)) {
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.generateMipmap();
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
     }
     else if (version === 2) {
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.generateMipmap();
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
     }
     else {
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -3401,6 +3498,9 @@ const TextureLoader = (gl, version) => {
                     width = image.data.width;
                     height = image.data.height;
                 }
+            }
+            if (!width || !height) {
+                throw Exception("Couldn't determine width and/or height of one of the cubemap faces");
             }
             return Cubemap(gl, version, {
                 width: width,
@@ -4312,9 +4412,7 @@ const Hopper = ({
         throw Exception("webgl 1.0 not supported");
     })();
 
-    if (version === 2) {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    }
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     const debugUI = enableDebug ? DebugUI({
         refreshDelay: debugRefreshDelay,
@@ -4476,6 +4574,8 @@ const Hopper = ({
         disableDepth: () => gl.disable(gl.DEPTH_TEST),
         disableStencil: () => gl.disable(gl.STENCIL_TEST),
         disableCulling: () => gl.disable(gl.CULL_FACE),
+
+        setDepthMask: mask => gl.depthMask(mask),
 
         resize: () => canvas.resize(gl),
         getAspect: () => canvas.getAspect(),
@@ -4858,6 +4958,27 @@ const Hopper = ({
                     specular.active(2);
                     specular.bind();
                 }
+            });
+        },
+
+        createCubemapProgram: () => {
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_CUBEMAP_SHADER_VERT(version)),
+                                     Shader(gl, gl.FRAGMENT_SHADER, GEN_CUBEMAP_SHADER_FRAG(gl, version)));
+            prog.use();
+            prog.uniform1i("uCubemap", 0);
+            prog.halt();
+            return Object.freeze({
+                getID: () => prog.getID(),
+                use: () => prog.use(),
+                halt: () => prog.halt(),
+                delete: () => prog.delete(),
+                updateProjection: m => prog.uniformMatrix4("uProjection", m),
+                updateView: m => prog.uniformMatrix4("uView", m),
+                setCubemapTexture: cubemap => {
+                    gl.activeTexture(gl.TEXTURE0);
+                    cubemap.bind();
+                },
+                draw: () => gl.drawArrays(gl.TRIANGLES, 0, 36)
             });
         },
 
