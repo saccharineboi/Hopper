@@ -197,6 +197,13 @@
             const prism = hopper.createPrism(phongProgram, 0.5, 0.5, 2.0, 30, 30);
             const ball = hopper.createIcoSphere(basicColorProgram, 0.5, 3);
 
+            hopper.bindFogUBO();
+            hopper.setFog({ color: clearColor,
+                            distance: 5.0,
+                            intensity: 1.0,
+                            power: 1.0 });
+            hopper.unbindFogUBO();
+
             hopper.bindPhongMaterialUBO();
             hopper.setPhongMaterial({ ambient: Vec3(1.0, 1.0, 1.0),
                                       diffuse: Vec3(1.0, 1.0, 1.0),
