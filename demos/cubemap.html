@@ -120,6 +120,20 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
+            const framebuffer = hopper.createFramebuffer();
+            const colorAttachment = hopper.createColorAttachment(hopper.getWidth(), hopper.getHeight());
+            const depthStencilAttachment = hopper.createDepthStencilAttachmentAsRenderbuffer(hopper.getWidth(), hopper.getHeight());
+
+            framebuffer.bind();
+            framebuffer.attachColorTexture(colorAttachment, 0);
+            framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+            if (!framebuffer.isComplete()) {
+                throw new Error("Framebuffer is incomplete");
+            }
+            framebuffer.unbind();
+
+            const ppProgram = hopper.createPostProcessProgram();
+
             const spaceCamera = hopper.createFPSCamera({
                 elemID: "render-output",
                 position: Vec3(0, 1, 2),
@@ -185,7 +199,6 @@
             const cubemapProgram = hopper.createCubemapProgram();
             const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
 
-            hopper.enableDepth();
             hopper.enableCulling();
 
             const clearColor = Vec4(0.2, 0.3, 0.3, 1.0);
@@ -218,6 +231,24 @@
 
             let rotY = 0;
             hopper.render(dt => {
+                hopper.enableDepth();
+                framebuffer.bind();
+
+                hopper.resize((width, height) => {
+                    framebuffer.clearAttachments();
+                    framebuffer.delete();
+                    colorAttachment.resize(width, height);
+                    depthStencilAttachment.resize(width, height);
+                    framebuffer.recreate();
+                    framebuffer.bind();
+                    framebuffer.attachColorTexture(colorAttachment, 0);
+                    framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+                    if (!framebuffer.isComplete()) {
+                        throw new Error("Framebuffer is incomplete");
+                    }
+                });
+                hopper.clear();
+
                 spaceCamera.setAspectRatio(hopper.getAspect());
                 spaceCamera.update(dt);
 
@@ -248,9 +279,6 @@
                                           quadratic: quadratic,
                                           intensity: 1.0 });
                 hopper.unbindPointLightUBO();
-
-                hopper.resize();
-                hopper.clear();
 
                 phongProgram.use();
 
@@ -363,6 +391,14 @@
                 cubemapProgram.draw();
 
                 hopper.setDepthMask(true);
+
+                framebuffer.unbind();
+                hopper.clear();
+
+                hopper.disableDepth();
+                ppProgram.use();
+                ppProgram.setTexture(colorAttachment);
+                ppProgram.draw();
             });
         }
         catch (e) {
