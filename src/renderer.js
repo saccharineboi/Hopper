@@ -3187,6 +3187,109 @@ const Mesh = (gl, vertices, indices, version, program, ...configs) => {
 };
 
 //////////////////////////////////////////////////
+const FramebufferAttachment = (gl, width, height, internalFormat, format, type) => {
+    const initParameters = () => {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    };
+    const initTexture = id => {
+        gl.bindTexture(gl.TEXTURE_2D, id);
+        initParameters();
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+
+    let id = gl.createTexture();
+    initTexture(id);
+
+    return Object.freeze({
+        getID: () => id,
+        getWidth: () => width,
+        getHeight: () => height,
+        getInternalFormat: () => internalFormat,
+        getFormat: () => format,
+        getType: () => type,
+        bind: (ind = 0) => {
+            gl.activeTexture(gl.TEXTURE0 + ind);
+            gl.bindTexture(gl.TEXTURE_2D, id);
+        },
+        unbind: (ind = 0) =>  {
+            gl.activeTexture(gl.TEXTURE0 + ind);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        },
+        delete: () => gl.deleteTexture(id),
+        resize: (newWidth, newHeight) => {
+            if (width !== newWidth || height !== newHeight) {
+                width = newWidth;
+                height = newHeight;
+                gl.deleteTexture(id);
+                id = gl.createTexture();
+                initTexture(id);
+            }
+        }
+    });
+};
+
+//////////////////////////////////////////////////
+const Renderbuffer = (gl, width, height, type) => {
+    let id = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, id);
+    gl.renderbufferStorage(gl.RENDERBUFFER, type, width, height);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    return Object.freeze({
+        getID: () => id,
+        getWidth: () => width,
+        getHeight: () => height,
+        getType: () => type,
+        bind: () => gl.bindRenderbuffer(gl.RENDERBUFFER, id),
+        unbind: () => gl.bindRenderbuffer(gl.RENDERBUFFER, null),
+        delete: () => gl.deleteRenderbuffer(id),
+        resize: (newWidth, newHeight) => {
+            if (newWidth !== width || newHeight !== height) {
+                width = newWidth;
+                height = newHeight;
+                gl.deleteRenderbuffer(id);
+                id = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, id);
+                gl.renderbufferStorage(gl.RENDERBUFFER, type, width, height);
+                gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+            }
+        }
+    });
+};
+
+//////////////////////////////////////////////////
+const Framebuffer = gl => {
+    let id = gl.createFramebuffer();
+    const attachments = [];
+
+    return Object.freeze({
+        getID: () => id,
+        bind: () => gl.bindFramebuffer(gl.FRAMEBUFFER, id),
+        unbind: () => gl.bindFramebuffer(gl.FRAMEBUFFER, null),
+        isComplete: () => gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE,
+        delete: () => gl.deleteFramebuffer(id),
+        attachColorTexture: (texture, attachment = 0) => {
+            attachments.push(texture);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + attachment, gl.TEXTURE_2D, texture.getID(), null);
+        },
+        attachDepthStencilTexture: texture => {
+            attachments.push(texture);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, texture.getID(), null);
+        },
+        attachDepthStencilRenderbuffer: rbo => {
+            attachments.push(rbo);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rbo.getID());
+        },
+        clearAttachments: () => attachments.length = 0,
+        getAttachmentCount: () => attachments.length
+    });
+};
+
+//////////////////////////////////////////////////
 const Texture2D = (gl, version, data,
                   { width, height, internalFormat, format, type, minf, magf, wraps, wrapt, mipmap, anisotropy }) => {
     const id = gl.createTexture();
@@ -4607,6 +4710,8 @@ const Hopper = ({
 
         resize: () => canvas.resize(gl),
         getAspect: () => canvas.getAspect(),
+        getWidth: () => canvas.getWidth(),
+        getHeight: () => canvas.getHeight(),
 
         loadCubemap: async (name, root, textureLoader) => {
             switch (name) {
@@ -6560,7 +6665,12 @@ const Hopper = ({
 
         createSpaceCamera: conf => SpaceCamera(conf),
         createFPSCamera: conf => FPSCamera(conf),
-        createOrbitalCamera: conf => OrbitalCamera(conf)
+        createOrbitalCamera: conf => OrbitalCamera(conf),
+
+        createFramebuffer: () => Framebuffer(gl),
+        createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE),
+        createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
+        createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, gl.DEPTH24_STENCIL8)
     });
 };
 
