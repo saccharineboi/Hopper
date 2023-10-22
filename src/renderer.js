@@ -1588,6 +1588,28 @@ const GEN_SHADER_PRECISION = gl => {
 };
 
 //////////////////////////////////////////////////
+const INCLUDE_GAMMA_CORRECTION = `
+    uniform float uGamma;
+
+    vec4 ApplyGammaCorrection(vec4 inColor)
+    {
+        return vec4(pow(inColor.rgb, vec3(1.0 / uGamma)), inColor.a);
+    }
+    #define GAMMA_CORRECTION
+`;
+
+//////////////////////////////////////////////////
+const INCLUDE_GAMMA_CORRECTION_TEXTURE = `
+    uniform float uGamma;
+
+    vec4 ApplyGammaCorrection(vec4 inColor)
+    {
+        return vec4(pow(inColor.rgb, vec3(uGamma)), inColor.a);
+    }
+    #define GAMMA_CORRECTION_TEXTURE
+`;
+
+//////////////////////////////////////////////////
 const GEN_BASIC_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_ATTRIBUTE(version, BASIC_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
@@ -2175,6 +2197,8 @@ const GEN_PHONG_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
 
     ${GEN_INCLUDE_FOG_SHADER(version)}
 
+    ${INCLUDE_GAMMA_CORRECTION_TEXTURE}
+
 #if __VERSION__ == 300
     out vec4 output_color;
 #endif
@@ -2183,15 +2207,15 @@ const GEN_PHONG_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
 #if __VERSION__ == 300
         output_color = vec4(0.0, 0.0, 0.0, 1.0);
 
-        vec3 ambientTexColor = texture(uAmbientTexture, v_ambient_texcoord).rgb;
-        vec3 diffuseTexColor = texture(uDiffuseTexture, v_diffuse_texcoord).rgb;
-        vec3 specularTexColor = texture(uSpecularTexture, v_specular_texcoord).rgb;
+        vec3 ambientTexColor = ApplyGammaCorrection(texture(uAmbientTexture, v_ambient_texcoord)).rgb;
+        vec3 diffuseTexColor = ApplyGammaCorrection(texture(uDiffuseTexture, v_diffuse_texcoord)).rgb;
+        vec3 specularTexColor = ApplyGammaCorrection(texture(uSpecularTexture, v_specular_texcoord)).rgb;
 #elif __VERSION__ == 100
         vec4 output_color = vec4(0.0, 0.0, 0.0, 1.0);
 
-        vec3 ambientTexColor = texture2D(uAmbientTexture, v_ambient_texcoord).rgb;
-        vec3 diffuseTexColor = texture2D(uDiffuseTexture, v_diffuse_texcoord).rgb;
-        vec3 specularTexColor = texture2D(uSpecularTexture, v_specular_texcoord).rgb;
+        vec3 ambientTexColor = ApplyGammaCorrection(texture2D(uAmbientTexture, v_ambient_texcoord)).rgb;
+        vec3 diffuseTexColor = ApplyGammaCorrection(texture2D(uDiffuseTexture, v_diffuse_texcoord)).rgb;
+        vec3 specularTexColor = ApplyGammaCorrection(texture2D(uSpecularTexture, v_specular_texcoord)).rgb;
 #endif
         vec3 normal = normalize(v_norm);
 
@@ -2296,6 +2320,8 @@ const GEN_CUBEMAP_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_VARYING_IN(version, "vec3 v_texcoord")}
 
+    ${INCLUDE_GAMMA_CORRECTION_TEXTURE}
+
     uniform samplerCube uCubemap;
 
 #if __VERSION__ == 300
@@ -2304,9 +2330,9 @@ const GEN_CUBEMAP_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
     void main()
     {
 #if __VERSION__ == 300
-        output_color = texture(uCubemap, v_texcoord);
+        output_color = ApplyGammaCorrection(texture(uCubemap, v_texcoord));
 #elif __VERSION__ == 100
-        gl_FragColor = textureCube(uCubemap, v_texcoord);
+        gl_FragColor = ApplyGammaCorrection(textureCube(uCubemap, v_texcoord));
 #endif
     }
 `;
@@ -2364,15 +2390,17 @@ const GEN_POSTPROCESS_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(versi
 
     uniform sampler2D uColor0;
 
+    ${INCLUDE_GAMMA_CORRECTION}
+
 #if __VERSION__ == 300
     out vec4 output_color;
 #endif
     void main()
     {
 #if __VERSION__ == 300
-        output_color = texture(uColor0, v_texcoord);
+        output_color = ApplyGammaCorrection(texture(uColor0, v_texcoord));
 #elif __VERSION__ == 100
-        gl_FragColor = texture2D(uColor0, v_texcoord);
+        gl_FragColor = ApplyGammaCorrection(texture2D(uColor0, v_texcoord));
 #endif
     }
 `;
@@ -3331,6 +3359,36 @@ const Renderbuffer = (gl, width, height, type) => {
 };
 
 //////////////////////////////////////////////////
+const RenderbufferMS = (gl, width, height, type, samples) => {
+    let id = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, id);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, type, width, height);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    return Object.freeze({
+        getID: () => id,
+        getWidth: () => width,
+        getHeight: () => height,
+        getType: () => type,
+        getSamples: () => samples,
+        bind: () => gl.bindRenderbuffer(gl.RENDERBUFFER, id),
+        unbind: () => gl.bindRenderbuffer(gl.RENDERBUFFER, null),
+        delete: () => gl.deleteRenderbuffer(id),
+        resize: (newWidth, newHeight) => {
+            if (newWidth !== width || newHeight !== height) {
+                width = newWidth;
+                height = newHeight;
+                gl.deleteRenderbuffer(id);
+                id = gl.createRenderbuffer();
+                gl.bindRenderbuffer(gl.RENDERBUFFER, id);
+                gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, type, width, height);
+                gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+            }
+        }
+    });
+};
+
+//////////////////////////////////////////////////
 const Framebuffer = gl => {
     let id = gl.createFramebuffer();
     const attachments = [];
@@ -3338,6 +3396,8 @@ const Framebuffer = gl => {
     return Object.freeze({
         getID: () => id,
         bind: () => gl.bindFramebuffer(gl.FRAMEBUFFER, id),
+        bindRead: () => gl.bindFramebuffer(gl.READ_FRAMEBUFFER, id),
+        bindDraw: () => gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, id),
         unbind: () => gl.bindFramebuffer(gl.FRAMEBUFFER, null),
         isComplete: () => gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE,
         delete: () => gl.deleteFramebuffer(id),
@@ -3353,6 +3413,10 @@ const Framebuffer = gl => {
         attachDepthStencilRenderbuffer: rbo => {
             attachments.push(rbo);
             gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rbo.getID());
+        },
+        attachColorRenderbuffer: (rbo, attachment = 0) => {
+            attachments.push(rbo);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + attachment, gl.RENDERBUFFER, rbo.getID());
         },
         clearAttachments: () => attachments.length = 0,
         getAttachmentCount: () => attachments.length
@@ -5654,6 +5718,8 @@ const Hopper = ({
                 updateSpecularTexTransform: v => prog.uniformVec2("uSpecularTexTransform", v),
                 updateSpecularTexMultiplier: v => prog.uniformVec2("uSpecularTexMultiplier", v),
 
+                updateGamma: gamma => prog.uniform1f("uGamma", gamma),
+
                 setAmbientTexture: t => {
                     t.active(0);
                     t.bind();
@@ -5698,6 +5764,7 @@ const Hopper = ({
                         gl.activeTexture(gl.TEXTURE0);
                         cubemap.bind();
                     },
+                    updateGamma: gamma => prog.uniform1f("uGamma", gamma),
                     draw: () => gl.drawArrays(gl.TRIANGLES, 0, 36)
                 });
             }
@@ -5779,6 +5846,7 @@ const Hopper = ({
                     gl.activeTexture(gl.TEXTURE0);
                     cubemap.bind();
                 },
+                updateGamma: gamma => prog.uniform1f("uGamma", gamma),
                 draw: () => {
                     cubeMesh.bind();
                     cubeMesh.draw();
@@ -5792,6 +5860,7 @@ const Hopper = ({
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_POSTPROCESS_SHADER_FRAG(gl, version)));
             prog.use();
             prog.uniform1i("uColor0", 0);
+            prog.uniform1f("uGamma", 2.2);
             prog.halt();
             if (version === 2) {
                 return Object.freeze({
@@ -5817,7 +5886,6 @@ const Hopper = ({
                 -1.0,  1.0, 0.0,        0.0, 1.0,
                 -1.0, -1.0, 0.0,        0.0, 0.0
             ]);
-
 
             const quadMesh = Mesh(gl, vertices, null, version, prog, {
                 name: SHADER_VERT_APOS_NAME,
@@ -6812,7 +6880,11 @@ const Hopper = ({
         createFramebuffer: () => Framebuffer(gl),
         createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE),
         createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
-        createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL)
+        createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL),
+        createColorAttachmentAsRenderbufferMS: (width, height, samples) => RenderbufferMS(gl, width, height, gl.RGB8, samples),
+        createDepthStencilAttachmentAsRenderbufferMS: (width, height, samples) => RenderbufferMS(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL, samples),
+
+        blit: (width, height) => gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
     });
 };
 
