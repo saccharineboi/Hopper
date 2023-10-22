@@ -40,6 +40,9 @@ const PHONG_SHADER_VERT_ATEXCOORD_LOC = 2;
 
 const CUBEMAP_SHADER_VERT_APOS_LOC = 0;
 
+const POSTPROCESS_SHADER_VERT_APOS_LOC = 0;
+const POSTPROCESS_SHADER_VERT_ATEXCOORD_LOC = 1;
+
 const SHADER_VERT_APOS_NAME = "a_pos";
 const SHADER_VERT_ACOL_NAME = "a_col";
 const SHADER_VERT_ATEXCOORD_NAME = "a_texcoord";
@@ -2309,6 +2312,72 @@ const GEN_CUBEMAP_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
 `;
 
 //////////////////////////////////////////////////
+const GEN_POSTPROCESS_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
+
+#if __VERSION__ == 300
+    // assuming right-handed coordinate system
+    const vec3 ${SHADER_VERT_APOS_NAME}[6] = vec3[](
+        // bottom-left triangle
+        vec3(-1.0, -1.0, 0.0),
+        vec3( 1.0, -1.0, 0.0),
+        vec3( 1.0,  1.0, 0.0),
+        // top-right triangle
+        vec3( 1.0,  1.0, 0.0),
+        vec3(-1.0,  1.0, 0.0),
+        vec3(-1.0, -1.0, 0.0)
+    );
+    const vec2 ${SHADER_VERT_ATEXCOORD_NAME}[6] = vec2[](
+        // bottom left triangle
+        vec2(0.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        // top-right triangle
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, 0.0)
+    );
+#elif __VERSION__ == 100
+    ${GEN_SHADER_ATTRIBUTE(version, 0, `vec3 ${SHADER_VERT_APOS_NAME}`)}
+    ${GEN_SHADER_ATTRIBUTE(version, 1, `vec2 ${SHADER_VERT_ATEXCOORD_NAME}`)}
+#endif
+
+    ${GEN_SHADER_VARYING_OUT(version, `vec2 v_texcoord`)}
+
+    void main()
+    {
+#if __VERSION__ == 300
+        gl_Position = vec4(${SHADER_VERT_APOS_NAME}[gl_VertexID], 1.0);
+        v_texcoord = ${SHADER_VERT_ATEXCOORD_NAME}[gl_VertexID];
+#elif __VERSION__ == 100
+        gl_Position = vec4(${SHADER_VERT_APOS_NAME}, 1.0);
+        v_texcoord = ${SHADER_VERT_ATEXCOORD_NAME};
+#endif
+    }
+`;
+
+//////////////////////////////////////////////////
+const GEN_POSTPROCESS_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
+
+    ${GEN_SHADER_PRECISION(gl)}
+
+    ${GEN_SHADER_VARYING_IN(version, "vec2 v_texcoord")}
+
+    uniform sampler2D uColor0;
+
+#if __VERSION__ == 300
+    out vec4 output_color;
+#endif
+    void main()
+    {
+#if __VERSION__ == 300
+        output_color = texture(uColor0, v_texcoord);
+#elif __VERSION__ == 100
+        gl_FragColor = texture2D(uColor0, v_texcoord);
+#endif
+    }
+`;
+
+//////////////////////////////////////////////////
 const Shader = (gl, type, source) => {
     const id = gl.createShader(type);
     gl.shaderSource(id, source);
@@ -3272,6 +3341,7 @@ const Framebuffer = gl => {
         unbind: () => gl.bindFramebuffer(gl.FRAMEBUFFER, null),
         isComplete: () => gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE,
         delete: () => gl.deleteFramebuffer(id),
+        recreate: () => id = gl.createFramebuffer(),
         attachColorTexture: (texture, attachment = 0) => {
             attachments.push(texture);
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + attachment, gl.TEXTURE_2D, texture.getID(), null);
@@ -4708,7 +4778,12 @@ const Hopper = ({
 
         setDepthMask: mask => gl.depthMask(mask),
 
-        resize: () => canvas.resize(gl),
+        resize: callback => {
+            canvas.resize(gl);
+            if (callback) {
+                callback(canvas.getWidth(), canvas.getHeight());
+            }
+        },
         getAspect: () => canvas.getAspect(),
         getWidth: () => canvas.getWidth(),
         getHeight: () => canvas.getHeight(),
@@ -5685,7 +5760,7 @@ const Hopper = ({
 
             const cubeMesh = Mesh(gl, vertices, null, version, prog, {
                 name: SHADER_VERT_APOS_NAME,
-                index: 0,
+                index: CUBEMAP_SHADER_VERT_APOS_LOC,
                 size: 3,
                 type: gl.FLOAT,
                 normalized: false,
@@ -5708,6 +5783,73 @@ const Hopper = ({
                     cubeMesh.bind();
                     cubeMesh.draw();
                     cubeMesh.unbind();
+                }
+            });
+        },
+
+        createPostProcessProgram: () => {
+            const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_POSTPROCESS_SHADER_VERT(version)),
+                                     Shader(gl, gl.FRAGMENT_SHADER, GEN_POSTPROCESS_SHADER_FRAG(gl, version)));
+            prog.use();
+            prog.uniform1i("uColor0", 0);
+            prog.halt();
+            if (version === 2) {
+                return Object.freeze({
+                    getID: () => prog.getID(),
+                    use: () => prog.use(),
+                    halt: () => prog.halt(),
+                    delete: () => prog.delete(),
+                    setTexture: t => {
+                        gl.activeTexture(gl.TEXTURE0);
+                        t.bind();
+                    },
+                    draw: () => gl.drawArrays(gl.TRIANGLES, 0, 6)
+                });
+            }
+
+            const vertices = new Float32Array([
+                // positions            // texcoords
+                -1.0, -1.0, 0.0,        0.0, 0.0,
+                 1.0, -1.0, 0.0,        1.0, 0.0,
+                 1.0,  1.0, 0.0,        1.0, 1.0,
+
+                 1.0,  1.0, 0.0,        1.0, 1.0,
+                -1.0,  1.0, 0.0,        0.0, 1.0,
+                -1.0, -1.0, 0.0,        0.0, 0.0
+            ]);
+
+
+            const quadMesh = Mesh(gl, vertices, null, version, prog, {
+                name: SHADER_VERT_APOS_NAME,
+                index: POSTPROCESS_SHADER_VERT_APOS_LOC,
+                size: 3,
+                type: gl.FLOAT,
+                normalized: false,
+                stride: 5 * FLOAT32_SIZE,
+                offset: 0
+            }, {
+                name: SHADER_VERT_ATEXCOORD_NAME,
+                index: POSTPROCESS_SHADER_VERT_ATEXCOORD_LOC,
+                size: 2,
+                type: gl.FLOAT,
+                normalized: false,
+                stride: 5 * FLOAT32_SIZE,
+                offset: 3 * FLOAT32_SIZE
+            });
+
+            return Object.freeze({
+                getID: () => prog.getID(),
+                use: () => prog.use(),
+                halt: () => prog.halt(),
+                delete: () => prog.delete(),
+                setTexture: t => {
+                    gl.activeTexture(gl.TEXTURE0);
+                    t.bind();
+                },
+                draw: () => {
+                    quadMesh.bind();
+                    quadMesh.draw();
+                    quadMesh.unbind();
                 }
             });
         },
@@ -6670,7 +6812,7 @@ const Hopper = ({
         createFramebuffer: () => Framebuffer(gl),
         createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE),
         createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
-        createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, gl.DEPTH24_STENCIL8)
+        createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL)
     });
 };
 
