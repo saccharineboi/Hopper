@@ -4608,6 +4608,517 @@ const Hopper = ({
         resize: () => canvas.resize(gl),
         getAspect: () => canvas.getAspect(),
 
+        loadCubemap: async (name, root, textureLoader) => {
+            switch (name) {
+                case "clouds1":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_down.bmp`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_east.bmp`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_south.bmp`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_north.bmp`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_up.bmp`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/clouds1/clouds1_west.bmp`,
+                        face: "negative_x"
+                    });
+                case "retro/Apocalypse":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse/vz_apocalypse_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Apocalypse Land":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Land/vz_apocalypse_land_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Apocalypse Ocean":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Apocalypse Ocean/vz_apocalypse_ocean_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Classic":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic/vz_classic_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Classic Land":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Classic Land/vz_classic_land_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Clear":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear/vz_clear_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Clear Ocean":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Clear Ocean/vz_clear_ocean_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Dawn":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dawn/vz_dawn_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Dusk":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk/vz_dusk_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Dusk Land":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Land/vz_dusk_land_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Dusk Ocean":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Dusk Ocean/vz_dusk_ocean_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Empty Space":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Empty Space/vz_empty_space_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Gray":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Gray/vz_gray_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Moody":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Moody/vz_moody_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Netherworld":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Netherworld/vz_netherworld_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Sinister":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister/vz_sinister_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Sinister Land":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Land/vz_sinister_land_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Sinister Ocean":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sinister Ocean/vz_sinister_ocean_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Sunshine":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Sunshine/vz_sunshine_left.png`,
+                        face: "negative_x"
+                    });
+                case "retro/Techno":
+                    return await textureLoader.loadCubemap({
+                        internalFormat: "rgb",
+                        format: "rgb",
+                        type: "uint8",
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_down.png`,
+                        face: "negative_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_right.png`,
+                        face: "positive_x"
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_back.png`,
+                        face: "negative_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_front.png`,
+                        face: "positive_z"
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_up.png`,
+                        face: "positive_y"
+                    }, {
+                        url: `${root}/skyboxes/retro/Techno/vz_techno_left.png`,
+                        face: "negative_x"
+                    });
+                default:
+                    throw Exception(`${name} is not a recognized cubemap`);
+            }
+        },
+
         createBasicProgram: () => {
             const prog = Program(gl, Shader(gl, gl.VERTEX_SHADER, GEN_BASIC_SHADER_VERT(version)),
                                      Shader(gl, gl.FRAGMENT_SHADER, GEN_BASIC_SHADER_FRAG(gl, version)));
