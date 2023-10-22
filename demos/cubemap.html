@@ -105,8 +105,8 @@
                 enableDebug: true,
                 debugRefreshDelay: 1000,
                 forceWebGL1: false,
-                antialias: true,
-                stencil: true,
+                antialias: false,
+                stencil: false,
                 powerPreference: "high-performance",
                 failIfMajorPerformanceCaveat: true
             });
@@ -120,13 +120,24 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
+            const sampleCount = 8;
+            const framebufferMS = hopper.createFramebuffer();
+            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), sampleCount);
+            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), sampleCount);
+
+            framebufferMS.bind();
+            framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+            framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+            if (!framebufferMS.isComplete()) {
+                throw new Error("FramebufferMS is incomplete");
+            }
+            framebufferMS.unbind();
+
             const framebuffer = hopper.createFramebuffer();
             const colorAttachment = hopper.createColorAttachment(hopper.getWidth(), hopper.getHeight());
-            const depthStencilAttachment = hopper.createDepthStencilAttachmentAsRenderbuffer(hopper.getWidth(), hopper.getHeight());
 
             framebuffer.bind();
-            framebuffer.attachColorTexture(colorAttachment, 0);
-            framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+            framebuffer.attachColorTexture(colorAttachment);
             if (!framebuffer.isComplete()) {
                 throw new Error("Framebuffer is incomplete");
             }
@@ -232,20 +243,32 @@
             let rotY = 0;
             hopper.render(dt => {
                 hopper.enableDepth();
-                framebuffer.bind();
+                framebufferMS.bind();
 
                 hopper.resize((width, height) => {
+                    framebufferMS.clearAttachments();
+                    framebufferMS.delete();
+                    colorAttachmentMS.resize(width, height);
+                    depthStencilAttachmentMS.resize(width, height);
+                    framebufferMS.recreate();
+                    framebufferMS.bind();
+                    framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+                    framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+                    if (!framebufferMS.isComplete()) {
+                        throw new Error("Framebuffer is incomplete");
+                    }
+
                     framebuffer.clearAttachments();
                     framebuffer.delete();
                     colorAttachment.resize(width, height);
-                    depthStencilAttachment.resize(width, height);
                     framebuffer.recreate();
                     framebuffer.bind();
-                    framebuffer.attachColorTexture(colorAttachment, 0);
-                    framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+                    framebuffer.attachColorTexture(colorAttachment);
                     if (!framebuffer.isComplete()) {
                         throw new Error("Framebuffer is incomplete");
                     }
+
+                    framebufferMS.bind();
                 });
                 hopper.clear();
 
@@ -281,6 +304,8 @@
                 hopper.unbindPointLightUBO();
 
                 phongProgram.use();
+
+                phongProgram.updateGamma(2.2);
 
                 phongProgram.updateProjection(projection);
 
@@ -388,11 +413,20 @@
                 cubemapProgram.setCubemapTexture(cubemapTexture);
                 cubemapProgram.updateProjection(projection);
                 cubemapProgram.updateView(view);
+                cubemapProgram.updateGamma(2.2);
                 cubemapProgram.draw();
 
                 hopper.setDepthMask(true);
 
+                framebufferMS.unbind();
+                framebufferMS.bindRead();
+                framebuffer.bindDraw();
+
+                hopper.clear();
+                hopper.blit(hopper.getWidth(), hopper.getHeight());
+
                 framebuffer.unbind();
+
                 hopper.clear();
 
                 hopper.disableDepth();
