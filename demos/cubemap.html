@@ -183,29 +183,7 @@
             });
 
             const cubemapProgram = hopper.createCubemapProgram();
-            const cubemapTexture = await textureLoader.loadCubemap({
-                internalFormat: "rgb",
-                format: "rgb",
-                type: "uint8"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_down.bmp",
-                face: "negative_y"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_east.bmp",
-                face: "positive_x"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_south.bmp",
-                face: "negative_z"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_north.bmp",
-                face: "positive_z"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_up.bmp",
-                face: "positive_y"
-            }, {
-                url: "../skyboxes/clouds1/clouds1_west.bmp",
-                face: "negative_x"
-            });
+            const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
 
             hopper.enableDepth();
             hopper.enableCulling();
@@ -257,8 +235,8 @@
                 hopper.setDirLight(0, { ambient: Vec3(0.1, 0.1, 0.1),
                                         diffuse: Vec3(1.0, 1.0, 0.9),
                                         specular: Vec3(1.0, 1.0, 1.0), 
-                                        direction: view.mulVec4(Vec4(1.0, -0.5, 0.0, 0.0)),
-                                        intensity: 1.0 });
+                                        direction: view.mulVec4(Vec4(-1.0, -0.2, 0.0, 0.0).norm()),
+                                        intensity: 0.5 });
                 hopper.unbindDirLightUBO();
 
                 hopper.bindPointLightUBO();
