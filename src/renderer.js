@@ -38,6 +38,8 @@ const PHONG_SHADER_VERT_APOS_LOC = 0;
 const PHONG_SHADER_VERT_ANORM_LOC = 1;
 const PHONG_SHADER_VERT_ATEXCOORD_LOC = 2;
 
+const CUBEMAP_SHADER_VERT_APOS_LOC = 0;
+
 const SHADER_VERT_APOS_NAME = "a_pos";
 const SHADER_VERT_ACOL_NAME = "a_col";
 const SHADER_VERT_ATEXCOORD_NAME = "a_texcoord";
@@ -2207,7 +2209,7 @@ const GEN_CUBEMAP_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 
 #if __VERSION__ == 300
     // assuming right-handed coordinate system
-    const vec3 positions[36] = vec3[](
+    const vec3 ${SHADER_VERT_APOS_NAME}[36] = vec3[](
         // front face
         vec3(-1.0, -1.0, -1.0),
         vec3( 1.0, -1.0, -1.0),
@@ -2262,17 +2264,24 @@ const GEN_CUBEMAP_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
         vec3(-1.0, -1.0, -1.0),
         vec3(-1.0, -1.0,  1.0)
     );
+#elif __VERSION__ == 100
+    ${GEN_SHADER_ATTRIBUTE(version, CUBEMAP_SHADER_VERT_APOS_LOC, `vec3 ${SHADER_VERT_APOS_NAME}`)}
 #endif
 
-    ${GEN_SHADER_VARYING_OUT(version, "vec3 v_texcoord")}
+    ${GEN_SHADER_VARYING_OUT(version, `vec3 v_texcoord`)}
 
     uniform mat4 uProjection;
     uniform mat4 uView;
 
     void main()
     {
-        vec4 output_pos = uProjection * mat4(mat3(uView)) * vec4(positions[gl_VertexID], 1.0);
-        v_texcoord = positions[gl_VertexID];
+#if __VERSION__ == 300
+        vec4 output_pos = uProjection * mat4(mat3(uView)) * vec4(${SHADER_VERT_APOS_NAME}[gl_VertexID], 1.0);
+        v_texcoord = ${SHADER_VERT_APOS_NAME}[gl_VertexID];
+#elif __VERSION__ == 100
+        vec4 output_pos = uProjection * mat4(mat3(uView)) * vec4(${SHADER_VERT_APOS_NAME}, 1.0);
+        v_texcoord = ${SHADER_VERT_APOS_NAME};
+#endif
         gl_Position = output_pos.xyww;
     }
 `;
@@ -3007,33 +3016,39 @@ const SpotLightUBO = (gl, version) => {
 //////////////////////////////////////////////////
 const VAO = (gl, vbo, ebo, version, program, ...configs) => {
     const elementType = (() => {
-        const elementData = ebo.getData();
-        if (elementData.BYTES_PER_ELEMENT === 4) {
-            return gl.UNSIGNED_INT;
+        if (ebo) {
+            const elementData = ebo.getData();
+            if (elementData.BYTES_PER_ELEMENT === 4) {
+                return gl.UNSIGNED_INT;
+            }
+            else if (elementData.BYTES_PER_ELEMENT === 2) {
+                return gl.UNSIGNED_SHORT;
+            }
+            throw Exception("EBO element data type is unrecognized");
         }
-        else if (elementData.BYTES_PER_ELEMENT === 2) {
-            return gl.UNSIGNED_SHORT;
-        }
-        throw Exception("EBO element data type is unrecognized");
+        return null;
     })();
 
     if (version === 2) {
         const id = gl.createVertexArray();
         gl.bindVertexArray(id);
         vbo.bind();
+        let totalSize = 0;
         for (const config of configs) {
             gl.enableVertexAttribArray(config.index);
             gl.vertexAttribPointer(config.index,
-                config.size,
-                config.type,
-                config.normalized,
-                config.stride,
-                config.offset);
+                                   config.size,
+                                   config.type,
+                                   config.normalized,
+                                   config.stride,
+                                   config.offset);
+            totalSize += config.size;
         }
+        const vertexCount = vbo.getCount() / totalSize;
         vbo.unbind();
-        ebo.bind();
+        ebo?.bind();
         gl.bindVertexArray(null);
-        ebo.unbind();
+        ebo?.unbind();
 
         return Object.freeze({
             getID: () => id,
@@ -3041,15 +3056,17 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
             getEbo: () => ebo,
             getVersion: () => version,
             getConfigs: () => configs,
+            getVertexCount: () => vertexCount,
             bind: () => gl.bindVertexArray(id),
             unbind: () => gl.bindVertexArray(null),
-            draw: (mode = gl.TRIANGLES) => gl.drawElements(mode, ebo.getCount(), elementType, 0)
+            draw: (mode = gl.TRIANGLES) => ebo ? gl.drawElements(mode, ebo.getCount(), elementType, 0) : gl.drawArrays(mode, 0, vertexCount)
         });
     }
     else if (version === 1) {
         const ext = gl.getExtension("OES_vertex_array_object");
         if (!ext) {
             const attributes = new Map();
+            let totalSize = 0;
             for (const config of configs) {
                 const attribLoc = gl.getAttribLocation(program.getID(), config.name);
                 if (-1 === attribLoc) {
@@ -3059,7 +3076,9 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
                 else {
                     attributes.set(config.name, attribLoc)
                 }
+                totalSize += config.size;
             }
+            const vertexCount = vbo.getCount() / totalSize;
 
             return Object.freeze({
                 getID: () => null,
@@ -3067,9 +3086,10 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
                 getEbo: () => ebo,
                 getVersion: () => version,
                 getConfigs: () => configs,
+                getVertexCount: () => vertexCount,
                 bind: () => {
                     vbo.bind();
-                    ebo.bind();
+                    ebo?.bind();
                     for (const config of configs) {
                         if (attributes.has(config.name)) {
                             const attribLoc = attributes.get(config.name);
@@ -3085,9 +3105,9 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
                 },
                 unbind: () => {
                     vbo.unbind();
-                    ebo.unbind();
+                    ebo?.unbind();
                 },
-                draw: (mode = gl.TRIANGLES) => gl.drawElements(mode, ebo.getCount(), elementType, 0)
+                draw: (mode = gl.TRIANGLES) => ebo ? gl.drawElements(mode, ebo.getCount(), elementType, 0) : gl.drawArrays(mode, 0, vertexCount)
             });
         }
         else {
@@ -3106,6 +3126,7 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
             const id = ext.createVertexArrayOES();
             ext.bindVertexArrayOES(id);
             vbo.bind();
+            let totalSize = 0;
             for (const config of configs) {
                 if (attributes.has(config.name)) {
                     const attribLoc = attributes.get(config.name);
@@ -3117,11 +3138,13 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
                                            config.stride,
                                            config.offset);
                 }
+                totalSize += config.size;
             }
+            const vertexCount = vbo.getCount() / totalSize;
             vbo.unbind();
-            ebo.bind();
+            ebo?.bind();
             ext.bindVertexArrayOES(null);
-            ebo.unbind();
+            ebo?.unbind();
 
             return Object.freeze({
                 getID: () => id,
@@ -3129,9 +3152,10 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
                 getEbo: () => ebo,
                 getVersion: () => version,
                 getConfigs: () => configs,
+                getVertexCount: () => vertexCount,
                 bind: () => ext.bindVertexArrayOES(id),
                 unbind: () => ext.bindVertexArrayOES(null),
-                draw: (mode = gl.TRIANGLES) => gl.drawElements(mode, ebo.getCount(), elementType, 0)
+                draw: (mode = gl.TRIANGLES) => ebo ? gl.drawElements(mode, ebo.getCount(), elementType, 0) : gl.drawArrays(mode, 0, vertexCount)
             });
         }
     }
@@ -3143,7 +3167,7 @@ const VAO = (gl, vbo, ebo, version, program, ...configs) => {
 //////////////////////////////////////////////////
 const Mesh = (gl, vertices, indices, version, program, ...configs) => {
     const vbo = Buffer(gl, gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    const ebo = Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    const ebo = indices ? Buffer(gl, gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW) : null;
     const vao = VAO(gl, vbo, ebo, version, program, ...configs);
 
     return Object.freeze({
@@ -3251,7 +3275,9 @@ const Cubemap = (gl, version,
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    if (version === 2) {
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    }
     for (const image of imageBuffer) {
         switch (image.face) {
             case "positive_x":
@@ -4412,7 +4438,9 @@ const Hopper = ({
         throw Exception("webgl 1.0 not supported");
     })();
 
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    if (version === 2) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    }
 
     const debugUI = enableDebug ? DebugUI({
         refreshDelay: debugRefreshDelay,
@@ -4967,6 +4995,88 @@ const Hopper = ({
             prog.use();
             prog.uniform1i("uCubemap", 0);
             prog.halt();
+            if (version === 2) {
+                return Object.freeze({
+                    getID: () => prog.getID(),
+                    use: () => prog.use(),
+                    halt: () => prog.halt(),
+                    delete: () => prog.delete(),
+                    updateProjection: m => prog.uniformMatrix4("uProjection", m),
+                    updateView: m => prog.uniformMatrix4("uView", m),
+                    setCubemapTexture: cubemap => {
+                        gl.activeTexture(gl.TEXTURE0);
+                        cubemap.bind();
+                    },
+                    draw: () => gl.drawArrays(gl.TRIANGLES, 0, 36)
+                });
+            }
+
+            const vertices = new Float32Array([
+                // front face
+                -1.0, -1.0, -1.0,
+                 1.0, -1.0, -1.0,
+                 1.0,  1.0, -1.0,
+
+                 1.0,  1.0, -1.0,
+                -1.0,  1.0, -1.0,
+                -1.0, -1.0, -1.0,
+
+                // back face
+                -1.0, -1.0, 1.0,
+                -1.0,  1.0, 1.0,
+                 1.0,  1.0, 1.0,
+
+                 1.0,  1.0, 1.0,
+                 1.0, -1.0, 1.0,
+                -1.0, -1.0, 1.0,
+
+                // left face
+                -1.0, -1.0,  1.0,
+                -1.0, -1.0, -1.0,
+                -1.0,  1.0, -1.0,
+
+                -1.0,  1.0, -1.0,
+                -1.0,  1.0,  1.0,
+                -1.0, -1.0,  1.0,
+
+                // right face
+                1.0, -1.0, -1.0,
+                1.0, -1.0,  1.0,
+                1.0,  1.0,  1.0,
+
+                1.0,  1.0,  1.0,
+                1.0,  1.0, -1.0,
+                1.0, -1.0, -1.0,
+
+                // top face
+                -1.0, 1.0,  1.0,
+                -1.0, 1.0, -1.0,
+                 1.0, 1.0, -1.0,
+
+                 1.0, 1.0, -1.0,
+                 1.0, 1.0,  1.0,
+                -1.0, 1.0,  1.0,
+
+                // bottom face
+                -1.0, -1.0,  1.0,
+                 1.0, -1.0,  1.0,
+                 1.0, -1.0, -1.0,
+
+                 1.0, -1.0, -1.0,
+                -1.0, -1.0, -1.0,
+                -1.0, -1.0,  1.0
+            ]);
+
+            const cubeMesh = Mesh(gl, vertices, null, version, prog, {
+                name: SHADER_VERT_APOS_NAME,
+                index: 0,
+                size: 3,
+                type: gl.FLOAT,
+                normalized: false,
+                stride: 0,
+                offset: 0
+            });
+
             return Object.freeze({
                 getID: () => prog.getID(),
                 use: () => prog.use(),
@@ -4978,7 +5088,11 @@ const Hopper = ({
                     gl.activeTexture(gl.TEXTURE0);
                     cubemap.bind();
                 },
-                draw: () => gl.drawArrays(gl.TRIANGLES, 0, 36)
+                draw: () => {
+                    cubeMesh.bind();
+                    cubeMesh.draw();
+                    cubeMesh.unbind();
+                }
             });
         },
 
