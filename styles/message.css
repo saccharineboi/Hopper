@@ -2,7 +2,7 @@
     position: absolute;
     color: orange;
     background-color: black;
-    font-size: 2em;
+    font-size: 1em;
     white-space: pre-wrap;
     word-wrap: break-word;
     z-index: 99;
@@ -10,4 +10,5 @@
     height: 100%;
     display: none;
     padding: 20px;
+    overflow-y: auto;
 }
