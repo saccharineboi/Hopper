@@ -5957,9 +5957,12 @@ const Hopper = ({
             }
             framebuffer.unbind();
 
+            let gamma = 2.2;
+
             return Object.freeze({
                 getSamples: () => samples,
-                updateGamma: gamma => ppProgramRaw.uniform1f("uGamma", gamma),
+                updateGamma: newGamma => gamma = newGamma,
+                getGamma: () => gamma,
                 resize: (width, height) => {
                     framebufferMS.clearAttachments();
                     framebufferMS.delete();
@@ -5997,6 +6000,7 @@ const Hopper = ({
 
                     ppProgram.use();
                     ppProgram.setTexture(colorAttachment);
+                    ppProgramRaw.uniform1f("uGamma", gamma);
                     ppProgram.draw();
                 }
             });
