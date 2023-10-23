@@ -4599,6 +4599,12 @@ const DebugUI = ({
         const maxTextureSize = webglContext.getParameter(webglContext.MAX_TEXTURE_SIZE);
         return `Max texture size: ${maxTextureSize}`;
     })();
+    document.getElementById("hopper-webgl-16bit-floating-point-framebuffer-support").innerHTML = (() => {
+        if (webglContext.getExtension("EXT_color_buffer_half_float")) {
+            return "16-bit floating-point framebuffer support: True";
+        }
+        return "16-bit floating-point framebuffer support: False";
+    })();
 
     let frameCount = 0;
 
@@ -6977,10 +6983,18 @@ const Hopper = ({
         createOrbitalCamera: conf => OrbitalCamera(conf),
 
         createFramebuffer: () => Framebuffer(gl),
-        createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB8, gl.RGB, gl.UNSIGNED_BYTE),
+        createColorAttachment: (width, height) => {
+            const ext = gl.getExtension("EXT_color_buffer_half_float");
+            return ext ? FramebufferAttachment(gl, width, height, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT)
+                       : FramebufferAttachment(gl, width, height, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE);
+        },
         createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
         createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL),
-        createColorAttachmentAsRenderbufferMS: (width, height, samples) => RenderbufferMS(gl, width, height, gl.RGB8, samples),
+        createColorAttachmentAsRenderbufferMS: (width, height, samples) => {
+            const ext = gl.getExtension("EXT_color_buffer_half_float");
+            return ext ? RenderbufferMS(gl, width, height, gl.RGBA16F, samples)
+                       : RenderbufferMS(gl, width, height, gl.RGBA8, samples);
+        },
         createDepthStencilAttachmentAsRenderbufferMS: (width, height, samples) => RenderbufferMS(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL, samples),
 
         blit: (width, height) => gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
