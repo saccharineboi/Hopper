@@ -70,8 +70,8 @@
                 enableDebug: true,
                 debugRefreshDelay: 1000,
                 forceWebGL1: false,
-                antialias: true,
-                stencil: true,
+                antialias: false,
+                stencil: false,
                 powerPreference: "high-performance",
                 failIfMajorPerformanceCaveat: true
             });
@@ -85,7 +85,10 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
+            const ppStack = hopper.createPostProcessStack(hopper, 8);
             const textureLoader = hopper.createTextureLoader();
+            const cubemapProgram = hopper.createCubemapProgram();
+            const cubemapTexture = await hopper.loadCubemap("retro/Empty Space", "..", textureLoader);
 
             const ambientTexture = await textureLoader.load2D("../textures/8081_earthlights4k.jpg", {
                 internalFormat: "rgb",
@@ -126,7 +129,7 @@
             hopper.enableDepth();
             hopper.enableCulling();
 
-            hopper.clearColor(Vec4(0.2, 0.3, 0.3, 1.0));
+            hopper.setClearColor(Vec4(0.2, 0.3, 0.3, 1.0));
 
             const phongProgram = hopper.createPhongTextureProgram();
 
@@ -153,6 +156,9 @@
 
             let rotY = 0;
             hopper.render(dt => {
+                hopper.resize((width, height) => ppStack.resize(width, height));
+                ppStack.bind();
+
                 rotY += dt * 0.001;
 
                 const { linear, quadratic } = Common.genAttenuationFromRange(100.0);
@@ -168,9 +174,6 @@
                 hopper.unbindPointLightUBO();
 
                 const rotation1 = Quat().setAxisAngle(Vec3(0.0, 1.0, 0.0), rotY * 0.5);
-
-                hopper.resize();
-                hopper.clear();
 
                 const projection = Transform.perspective(Common.toRadians(90.0), hopper.getAspect(), 0.1, 100.0);
                 const view = Transform.lookAt(Vec3(0.0, 0.0, 2.0), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0));
@@ -192,6 +195,8 @@
                 phongProgram.updateSpecularTexTransform(Vec2(0.0, 0.0));
                 phongProgram.updateSpecularTexMultiplier(Vec2(1.0, 1.0));
 
+                phongProgram.updateGamma(ppStack.getGamma());
+
                 phongProgram.setTextures({
                     ambient: ambientTexture,
                     diffuse: diffuseTexture,
@@ -200,6 +205,15 @@
 
                 sphere.bind();
                 sphere.draw();
+
+                cubemapProgram.use();
+                cubemapProgram.setCubemapTexture(cubemapTexture);
+                cubemapProgram.updateProjection(projection);
+                cubemapProgram.updateView(view);
+                cubemapProgram.updateGamma(ppStack.getGamma());
+                cubemapProgram.draw();
+
+                ppStack.unbind();
             });
         }
         catch (e) {

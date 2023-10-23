@@ -70,11 +70,16 @@
                 enableDebug: true,
                 debugRefreshDelay: 1000,
                 forceWebGL1: false,
-                antialias: true,
-                stencil: true,
+                antialias: false,
+                stencil: false,
                 powerPreference: "high-performance",
                 failIfMajorPerformanceCaveat: true
             });
+
+            const ppStack = hopper.createPostProcessStack(hopper, 8);
+            const textureLoader = hopper.createTextureLoader();
+            const cubemapProgram = hopper.createCubemapProgram();
+            const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
 
             const Common = hopper.Common;
             const Vec2 = hopper.Vec2;
@@ -87,12 +92,11 @@
             hopper.enableDepth();
             hopper.enableCulling();
 
-            hopper.clearColor(Vec4(0.2, 0.3, 0.3, 1.0));
+            hopper.setClearColor(Vec4(0.2, 0.3, 0.3, 1.0));
 
             const prog = hopper.createDoubleTextureProgram();
             const cube = hopper.createCube(prog);
 
-            const textureLoader = hopper.createTextureLoader();
             const texture0 = await textureLoader.loadCheckerboard2D({
                 brightColor: Vec4(200, 200, 200, 255),
                 darkColor: Vec4(50, 50, 50, 255),
@@ -115,21 +119,20 @@
                 anisotropy: true
             });
 
-            prog.use();
-
             hopper.turnOffLoadingScreen();
 
             let rotY = 0;
             hopper.render(dt => {
-                rotY += dt * 0.001;
+                hopper.resize((width, height) => ppStack.resize(width, height));
+                ppStack.bind();
 
-                hopper.resize();
-                hopper.clear();
+                rotY += dt * 0.001;
 
                 const projection = Transform.perspective(Common.toRadians(90.0), hopper.getAspect(), 0.1, 100.0);
                 const view = Transform.lookAt(Vec3(0.0, 0.0, 2.0), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0));
                 const model = Transform.fromRotationTranslationScale(Quat().setAxisAngle(Vec3(1, 1, 1).norm(), rotY), Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0));
 
+                prog.use();
                 prog.updateProjection(projection);
                 prog.updateModelView(view.mul(model));
 
@@ -142,6 +145,7 @@
                 prog.updateTexMultiplier(1, Vec2(1.0, 1.0));
 
                 prog.updateMix((Math.sin(rotY) + 1.0) * 0.5);
+                prog.updateGamma(ppStack.getGamma());
 
                 prog.setTextures({
                     texture0: texture0,
@@ -150,6 +154,15 @@
 
                 cube.bind();
                 cube.draw();
+
+                cubemapProgram.use();
+                cubemapProgram.setCubemapTexture(cubemapTexture);
+                cubemapProgram.updateProjection(projection);
+                cubemapProgram.updateView(view);
+                cubemapProgram.updateGamma(ppStack.getGamma());
+                cubemapProgram.draw();
+
+                ppStack.unbind();
             });
         }
         catch (e) {

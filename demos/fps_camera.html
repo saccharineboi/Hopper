@@ -120,6 +120,11 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
+            const ppStack = hopper.createPostProcessStack(hopper, 8);
+            const textureLoader = hopper.createTextureLoader();
+            const cubemapProgram = hopper.createCubemapProgram();
+            const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
+
             const spaceCamera = hopper.createFPSCamera({
                 elemID: "render-output",
                 position: Vec3(0, 1, 2),
@@ -140,7 +145,6 @@
                 enableDebug: true
             });
 
-            const textureLoader = hopper.createTextureLoader();
             const floorTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(50, 50, 50, 1.0),
                 brightColor: Vec4(200, 200, 200, 1.0),
@@ -186,7 +190,7 @@
             hopper.enableCulling();
 
             const clearColor = Vec4(0.2, 0.3, 0.3, 1.0);
-            hopper.clearColor(clearColor);
+            hopper.setClearColor(clearColor);
 
             const phongProgram = hopper.createPhongTextureProgram();
             const basicColorProgram = hopper.createBasicColorProgram();
@@ -223,6 +227,9 @@
 
             let rotY = 0;
             hopper.render(dt => {
+                hopper.resize((width, height) => ppStack.resize(width, height));
+                ppStack.bind();
+
                 spaceCamera.setAspectRatio(hopper.getAspect());
                 spaceCamera.update(dt);
 
@@ -246,11 +253,9 @@
                                           intensity: 1.0 });
                 hopper.unbindPointLightUBO();
 
-                hopper.resize();
-                hopper.clear();
-
                 phongProgram.use();
 
+                phongProgram.updateGamma(ppStack.getGamma());
                 phongProgram.updateProjection(projection);
 
                 phongProgram.updateAmbientTexTransform(Vec2(0.0, 0.0));
@@ -350,6 +355,15 @@
                     ball.bind();
                     ball.draw();
                 }
+
+                cubemapProgram.use();
+                cubemapProgram.setCubemapTexture(cubemapTexture);
+                cubemapProgram.updateProjection(projection);
+                cubemapProgram.updateView(view);
+                cubemapProgram.updateGamma(ppStack.getGamma());
+                cubemapProgram.draw();
+
+                ppStack.unbind();
             });
         }
         catch (e) {

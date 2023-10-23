@@ -70,8 +70,8 @@
                 enableDebug: true,
                 debugRefreshDelay: 1000,
                 forceWebGL1: false,
-                antialias: true,
-                stencil: true,
+                antialias: false,
+                stencil: false,
                 powerPreference: "high-performance",
                 failIfMajorPerformanceCaveat: true
             });
@@ -83,37 +83,48 @@
             const Transform = hopper.Transform;
             const Mat4 = hopper.Mat4;
 
+            const ppStack = hopper.createPostProcessStack(hopper, 8);
+            const textureLoader = hopper.createTextureLoader();
+            const cubemapProgram = hopper.createCubemapProgram();
+            const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
+
             hopper.enableDepth();
             hopper.enableCulling();
 
-            hopper.clearColor(Vec4(0.2, 0.3, 0.3, 1.0));
+            hopper.setClearColor(Vec4(0.2, 0.3, 0.3, 1.0));
 
             const prog = hopper.createBasicColorProgram();
             const rectangle = hopper.createRectangle(prog);
-
-            prog.use();
 
             hopper.turnOffLoadingScreen();
 
             let rotY = 0;
             hopper.render(dt => {
-                const frameBegin = performance.now();
+                hopper.resize((width, height) => ppStack.resize(width, height));
+                ppStack.bind();
 
                 rotY += dt * 0.001;
-
-                hopper.resize();
-                hopper.clear();
 
                 const projection = Transform.perspective(Common.toRadians(90.0), hopper.getAspect(), 0.1, 100.0);
                 const view = Transform.lookAt(Vec3(0.0, 0.0, 1.0), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0));
                 const model = Transform.fromRotationTranslationScale(Quat().setAxisAngle(Vec3(0, 0, 1), rotY), Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0));
 
+                prog.use();
                 prog.updateProjection(projection);
                 prog.updateModelView(view.mul(model));
                 prog.updateColor(Vec4((Math.cos(rotY) + 1.0) * 0.5, (Math.sin(rotY) + 1.0) * 0.5, 0.5, 1.0));
 
                 rectangle.bind();
                 rectangle.draw();
+
+                cubemapProgram.use();
+                cubemapProgram.setCubemapTexture(cubemapTexture);
+                cubemapProgram.updateProjection(projection);
+                cubemapProgram.updateView(view);
+                cubemapProgram.updateGamma(ppStack.getGamma());
+                cubemapProgram.draw();
+
+                ppStack.unbind();
             });
         }
         catch (e) {

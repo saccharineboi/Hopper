@@ -209,9 +209,7 @@
 
             let rotY = 0;
             hopper.render(dt => {
-                hopper.resize((width, height) => {
-                    ppStack.resize(width, height);
-                });
+                hopper.resize((width, height) => ppStack.resize(width, height));
                 ppStack.bind();
 
                 spaceCamera.setAspectRatio(hopper.getAspect());
