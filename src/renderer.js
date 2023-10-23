@@ -5932,12 +5932,16 @@ const Hopper = ({
         },
 
         createPostProcessStack: (hopper, samples) => {
+            let gamma = 2.2;
+            let width = hopper.getWidth();
+            let height = hopper.getHeight();
+
             const ppProgram = hopper.createPostProcessProgram();
             const ppProgramRaw = ppProgram.getProgram();
 
             const framebufferMS = hopper.createFramebuffer();
-            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), samples);
-            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), samples);
+            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(width, height, samples);
+            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(width, height, samples);
 
             framebufferMS.bind();
             framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
@@ -5948,7 +5952,7 @@ const Hopper = ({
             framebufferMS.unbind();
 
             const framebuffer = hopper.createFramebuffer();
-            const colorAttachment = hopper.createColorAttachment(hopper.getWidth(), hopper.getHeight());
+            const colorAttachment = hopper.createColorAttachment(width, height);
 
             framebuffer.bind();
             framebuffer.attachColorTexture(colorAttachment);
@@ -5957,33 +5961,38 @@ const Hopper = ({
             }
             framebuffer.unbind();
 
-            let gamma = 2.2;
-
             return Object.freeze({
                 getSamples: () => samples,
+                getWidth: () => width,
+                getHeight: () => height,
                 updateGamma: newGamma => gamma = newGamma,
                 getGamma: () => gamma,
-                resize: (width, height) => {
-                    framebufferMS.clearAttachments();
-                    framebufferMS.delete();
-                    colorAttachmentMS.resize(width, height);
-                    depthStencilAttachmentMS.resize(width, height);
-                    framebufferMS.recreate();
-                    framebufferMS.bind();
-                    framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
-                    framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
-                    if (!framebufferMS.isComplete()) {
-                        throw Exception("framebufferMS is incomplete in createPostProcessStack:resize");
-                    }
+                resize: (newWidth, newHeight) => {
+                    if (width !== newWidth || height !== newHeight) {
+                        width = newWidth;
+                        height = newHeight;
 
-                    framebuffer.clearAttachments();
-                    framebuffer.delete();
-                    colorAttachment.resize(width, height);
-                    framebuffer.recreate();
-                    framebuffer.bind();
-                    framebuffer.attachColorTexture(colorAttachment);
-                    if (!framebuffer.isComplete()) {
-                        throw Exception("framebuffer is incomplete in createPostProcessStack:resize");
+                        framebufferMS.clearAttachments();
+                        framebufferMS.delete();
+                        colorAttachmentMS.resize(width, height);
+                        depthStencilAttachmentMS.resize(width, height);
+                        framebufferMS.recreate();
+                        framebufferMS.bind();
+                        framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+                        framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+                        if (!framebufferMS.isComplete()) {
+                            throw Exception("framebufferMS is incomplete in createPostProcessStack:resize");
+                        }
+
+                        framebuffer.clearAttachments();
+                        framebuffer.delete();
+                        colorAttachment.resize(width, height);
+                        framebuffer.recreate();
+                        framebuffer.bind();
+                        framebuffer.attachColorTexture(colorAttachment);
+                        if (!framebuffer.isComplete()) {
+                            throw Exception("framebuffer is incomplete in createPostProcessStack:resize");
+                        }
                     }
                 },
                 bind: () => {
