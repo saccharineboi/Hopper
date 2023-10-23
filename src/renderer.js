@@ -2386,6 +2386,14 @@ const GEN_POSTPROCESS_SHADER_VERT = version => `${GEN_SHADER_VERSION(version)}
 `;
 
 //////////////////////////////////////////////////
+const INCLUDE_FXAA = `
+    float rgb_to_luma(vec3 rgb)
+    {
+        return dot(rgb, vec3(0.299, 0.587, 0.114));
+    }
+`;
+
+//////////////////////////////////////////////////
 const GEN_POSTPROCESS_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
 
     ${GEN_SHADER_PRECISION(gl)}
@@ -5955,23 +5963,29 @@ const Hopper = ({
             const ppProgram = hopper.createPostProcessProgram();
             const ppProgramRaw = ppProgram.getProgram();
 
-            const framebufferMS = hopper.createFramebuffer();
-            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(width, height, samples);
-            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(width, height, samples);
+            const framebufferMS = version === 2 ? hopper.createFramebuffer() : null;
+            const colorAttachmentMS = version === 2 ? hopper.createColorAttachmentAsRenderbufferMS(width, height, samples) : null;
+            const depthStencilAttachmentMS = version === 2 ? hopper.createDepthStencilAttachmentAsRenderbufferMS(width, height, samples) : null;
 
-            framebufferMS.bind();
-            framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
-            framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
-            if (!framebufferMS.isComplete()) {
-                throw Exception("framebufferMS is incomplete in createPostProcessStack");
+            if (version === 2) {
+                framebufferMS.bind();
+                framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+                framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+                if (!framebufferMS.isComplete()) {
+                    throw Exception("framebufferMS is incomplete in createPostProcessStack");
+                }
+                framebufferMS.unbind();
             }
-            framebufferMS.unbind();
 
             const framebuffer = hopper.createFramebuffer();
             const colorAttachment = hopper.createColorAttachment(width, height);
+            const depthStencilAttachment = version === 1 ? hopper.createDepthStencilAttachmentAsRenderbuffer(width, height) : null;
 
             framebuffer.bind();
             framebuffer.attachColorTexture(colorAttachment);
+            if (version === 1) {
+                framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+            }
             if (!framebuffer.isComplete()) {
                 throw Exception("framebuffer is incomplete in createPostProcessStack");
             }
@@ -5988,40 +6002,55 @@ const Hopper = ({
                         width = newWidth;
                         height = newHeight;
 
-                        framebufferMS.clearAttachments();
-                        framebufferMS.delete();
-                        colorAttachmentMS.resize(width, height);
-                        depthStencilAttachmentMS.resize(width, height);
-                        framebufferMS.recreate();
-                        framebufferMS.bind();
-                        framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
-                        framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
-                        if (!framebufferMS.isComplete()) {
-                            throw Exception("framebufferMS is incomplete in createPostProcessStack:resize");
+                        if (version === 2) {
+                            framebufferMS.clearAttachments();
+                            framebufferMS.delete();
+                            colorAttachmentMS.resize(width, height);
+                            depthStencilAttachmentMS.resize(width, height);
+                            framebufferMS.recreate();
+                            framebufferMS.bind();
+                            framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+                            framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+                            if (!framebufferMS.isComplete()) {
+                                throw Exception("framebufferMS is incomplete in createPostProcessStack:resize");
+                            }
                         }
 
                         framebuffer.clearAttachments();
                         framebuffer.delete();
                         colorAttachment.resize(width, height);
+                        if (version === 1) {
+                            depthStencilAttachment.resize(width, height);
+                        }
                         framebuffer.recreate();
                         framebuffer.bind();
                         framebuffer.attachColorTexture(colorAttachment);
+                        if (version === 1) {
+                            framebuffer.attachDepthStencilRenderbuffer(depthStencilAttachment);
+                        }
                         if (!framebuffer.isComplete()) {
                             throw Exception("framebuffer is incomplete in createPostProcessStack:resize");
                         }
                     }
                 },
                 bind: () => {
-                    framebufferMS.bind();
+                    if (version === 2) {
+                        framebufferMS.bind();
+                    }
+                    else {
+                        framebuffer.bind();
+                    }
                     hopper.clearColorDepthStencil();
                 },
                 unbind: () => {
-                    framebufferMS.bindRead();
-                    framebuffer.bindDraw();
-                    hopper.clearColor();
-                    hopper.blit(hopper.getWidth(), hopper.getHeight());
+                    if (version === 2) {
+                        framebufferMS.bindRead();
+                        framebuffer.bindDraw();
+                        hopper.clearColorDepth();
+                        hopper.blit(hopper.getWidth(), hopper.getHeight());
+                    }
                     framebuffer.unbind();
-                    hopper.clearColor();
+                    hopper.clearColorDepth();
 
                     ppProgram.use();
                     ppProgram.setTexture(colorAttachment);
@@ -6988,9 +7017,12 @@ const Hopper = ({
 
         createFramebuffer: () => Framebuffer(gl),
         createColorAttachment: (width, height) => {
-            const ext = gl.getExtension("EXT_color_buffer_half_float");
-            return ext ? FramebufferAttachment(gl, width, height, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT)
-                       : FramebufferAttachment(gl, width, height, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE);
+            if (version === 2) {
+                const ext = gl.getExtension("EXT_color_buffer_half_float");
+                return ext ? FramebufferAttachment(gl, width, height, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT)
+                           : FramebufferAttachment(gl, width, height, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE);
+            }
+            return FramebufferAttachment(gl, width, height, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE);
         },
         createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
         createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL),
