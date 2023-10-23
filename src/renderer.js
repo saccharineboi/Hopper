@@ -2402,9 +2402,13 @@ const GEN_POSTPROCESS_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(versi
     void main()
     {
 #if __VERSION__ == 300
-        output_color = ApplyGammaCorrection(texture(uColor0, v_texcoord));
+        vec4 hdrColor = texture(uColor0, v_texcoord);
+        vec3 tonemappedColor = hdrColor.rgb / (hdrColor.rgb + vec3(1.0));
+        output_color = ApplyGammaCorrection(vec4(tonemappedColor, hdrColor.a));
 #elif __VERSION__ == 100
-        gl_FragColor = ApplyGammaCorrection(texture2D(uColor0, v_texcoord));
+        vec4 hdrColor = texture2D(uColor0, v_texcoord);
+        vec3 tonemappedColor = hdrColor.rgb / (hdrColor.rgb + vec3(1.0));
+        gl_FragColor = ApplyGammaCorrection(vec4(tonemappedColor, hdrColor.a));
 #endif
     }
 `;
