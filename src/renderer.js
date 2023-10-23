@@ -1776,6 +1776,8 @@ const GEN_BASIC_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
     ${GEN_SHADER_VARYING_IN(version, "vec3 v_pos")}
     ${GEN_SHADER_VARYING_IN(version, "vec2 v_texcoord")}
 
+    ${INCLUDE_GAMMA_CORRECTION_TEXTURE}
+
     uniform vec4 uColor;
     uniform sampler2D uTexture;
 
@@ -1788,10 +1790,10 @@ const GEN_BASIC_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
     void main()
     {
 #if __VERSION__ == 300
-        vec4 texColor = texture(uTexture, v_texcoord);
+        vec4 texColor = ApplyGammaCorrection(texture(uTexture, v_texcoord));
         output_color = ApplyFog(uColor * texColor);
 #elif __VERSION__ == 100
-        vec4 texColor = texture2D(uTexture, v_texcoord);
+        vec4 texColor = ApplyGammaCorrection(texture2D(uTexture, v_texcoord));
         gl_FragColor = ApplyFog(uColor * texColor);
 #endif
     }
@@ -1816,6 +1818,8 @@ const GEN_DOUBLE_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ve
 
     ${GEN_INCLUDE_FOG_SHADER(version)} 
 
+    ${INCLUDE_GAMMA_CORRECTION_TEXTURE}
+
 #if __VERSION__ == 300
     out vec4 output_color;
 #endif
@@ -1823,12 +1827,12 @@ const GEN_DOUBLE_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ve
     void main()
     {
 #if __VERSION__ == 300
-        vec4 texColor0 = uColor0 * texture(uTexture0, v_texcoord0);
-        vec4 texColor1 = uColor1 * texture(uTexture1, v_texcoord1);
+        vec4 texColor0 = uColor0 * ApplyGammaCorrection(texture(uTexture0, v_texcoord0));
+        vec4 texColor1 = uColor1 * ApplyGammaCorrection(texture(uTexture1, v_texcoord1));
         output_color = ApplyFog(vec4(mix(texColor0.rgb, texColor1.rgb, uMix), 1.0));
 #elif __VERSION__ == 100
-        vec4 texColor0 = uColor0 * texture2D(uTexture0, v_texcoord0);
-        vec4 texColor1 = uColor1 * texture2D(uTexture1, v_texcoord1);
+        vec4 texColor0 = uColor0 * ApplyGammaCorrection(texture2D(uTexture0, v_texcoord0));
+        vec4 texColor1 = uColor1 * ApplyGammaCorrection(texture2D(uTexture1, v_texcoord1));
         gl_FragColor = ApplyFog(vec4(mix(texColor0.rgb, texColor1.rgb, uMix), 1.0));
 #endif
     }
@@ -5455,6 +5459,7 @@ const Hopper = ({
                 updateTexTransform: v => prog.uniform2f("uTexTransform", v.getX(), v.getY()),
                 updateTexMultiplier: v => prog.uniform2f("uTexMultiplier", v.getX(), v.getY()),
                 updateColor: v => prog.uniform4f("uColor", v.getR(), v.getG(), v.getB(), v.getA()),
+                updateGamma: gamma => prog.uniform1f("uGamma", gamma),
 
                 setTexture: t => {
                     t.active(0);
@@ -5501,6 +5506,7 @@ const Hopper = ({
                 updateTexMultiplier: (i, v) => prog.uniformVec2(`uTexMultiplier${i}`, v),
                 updateColor: (i, v) => prog.uniformVec4(`uColor${i}`, v),
                 updateMix: s => prog.uniform1f("uMix", s),
+                updateGamma: gamma => prog.uniform1f("uGamma", gamma),
 
                 setTextures: ({ texture0, texture1 }) => {
                     texture0.active(0);
@@ -6971,7 +6977,7 @@ const Hopper = ({
         createOrbitalCamera: conf => OrbitalCamera(conf),
 
         createFramebuffer: () => Framebuffer(gl),
-        createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE),
+        createColorAttachment: (width, height) => FramebufferAttachment(gl, width, height, gl.RGB8, gl.RGB, gl.UNSIGNED_BYTE),
         createDepthStencilAttachmentAsTexture: (width, height) => FramebufferAttachment(gl, width, height, gl.DEPTH24_STENCIL8, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8),
         createDepthStencilAttachmentAsRenderbuffer: (width, height) => Renderbuffer(gl, width, height, version === 2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL),
         createColorAttachmentAsRenderbufferMS: (width, height, samples) => RenderbufferMS(gl, width, height, gl.RGB8, samples),
