@@ -120,30 +120,7 @@
             const Mat4 = hopper.Mat4;
             const Mat3 = hopper.Mat3;
 
-            const sampleCount = 8;
-            const framebufferMS = hopper.createFramebuffer();
-            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), sampleCount);
-            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), sampleCount);
-
-            framebufferMS.bind();
-            framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
-            framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
-            if (!framebufferMS.isComplete()) {
-                throw new Error("FramebufferMS is incomplete");
-            }
-            framebufferMS.unbind();
-
-            const framebuffer = hopper.createFramebuffer();
-            const colorAttachment = hopper.createColorAttachment(hopper.getWidth(), hopper.getHeight());
-
-            framebuffer.bind();
-            framebuffer.attachColorTexture(colorAttachment);
-            if (!framebuffer.isComplete()) {
-                throw new Error("Framebuffer is incomplete");
-            }
-            framebuffer.unbind();
-
-            const ppProgram = hopper.createPostProcessProgram();
+            const ppStack = hopper.createPostProcessStack(hopper, 8);
 
             const spaceCamera = hopper.createFPSCamera({
                 elemID: "render-output",
@@ -173,8 +150,7 @@
                 magf: "nearest",
                 wraps: "repeat",
                 wrapt: "repeat",
-                mipmap: false,
-                anisotropy: 0
+                mipmap: false
             });
             const cubeTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(25, 50, 75, 1.0),
@@ -183,8 +159,7 @@
                 magf: "nearest",
                 wraps: "repeat",
                 wrapt: "repeat",
-                mipmap: false,
-                anisotropy: 0
+                mipmap: false
             });
             const sphereTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(75, 50, 25, 1.0),
@@ -193,8 +168,7 @@
                 magf: "nearest",
                 wraps: "repeat",
                 wrapt: "repeat",
-                mipmap: false,
-                anisotropy: 0
+                mipmap: false
             });
             const prismTexture = textureLoader.loadCheckerboard2D({
                 darkColor: Vec4(25, 75, 25),
@@ -203,17 +177,17 @@
                 magf: "nearest",
                 wraps: "repeat",
                 wrapt: "repeat",
-                mipmap: false,
-                anisotropy: 0
+                mipmap: false
             });
 
             const cubemapProgram = hopper.createCubemapProgram();
             const cubemapTexture = await hopper.loadCubemap("retro/Clear", "..", textureLoader);
 
             hopper.enableCulling();
+            hopper.enableDepth();
 
             const clearColor = Vec4(0.2, 0.3, 0.3, 1.0);
-            hopper.clearColor(clearColor);
+            hopper.setClearColor(clearColor);
 
             const phongProgram = hopper.createPhongTextureProgram();
             const basicColorProgram = hopper.createBasicColorProgram();
@@ -223,13 +197,6 @@
             const sphere = hopper.createCubeSphere(phongProgram, 1.0, 3);
             const prism = hopper.createPrism(phongProgram, 0.5, 0.5, 2.0, 30, 30);
             const ball = hopper.createIcoSphere(basicColorProgram, 0.5, 3);
-
-            // hopper.bindFogUBO();
-            // hopper.setFog({ color: clearColor,
-            //                 distance: 5.0,
-            //                 intensity: 1.0,
-            //                 power: 1.0 });
-            // hopper.unbindFogUBO();
 
             hopper.bindPhongMaterialUBO();
             hopper.setPhongMaterial({ ambient: Vec3(1.0, 1.0, 1.0),
@@ -242,35 +209,10 @@
 
             let rotY = 0;
             hopper.render(dt => {
-                hopper.enableDepth();
-                framebufferMS.bind();
-
                 hopper.resize((width, height) => {
-                    framebufferMS.clearAttachments();
-                    framebufferMS.delete();
-                    colorAttachmentMS.resize(width, height);
-                    depthStencilAttachmentMS.resize(width, height);
-                    framebufferMS.recreate();
-                    framebufferMS.bind();
-                    framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
-                    framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
-                    if (!framebufferMS.isComplete()) {
-                        throw new Error("Framebuffer is incomplete");
-                    }
-
-                    framebuffer.clearAttachments();
-                    framebuffer.delete();
-                    colorAttachment.resize(width, height);
-                    framebuffer.recreate();
-                    framebuffer.bind();
-                    framebuffer.attachColorTexture(colorAttachment);
-                    if (!framebuffer.isComplete()) {
-                        throw new Error("Framebuffer is incomplete");
-                    }
-
-                    framebufferMS.bind();
+                    ppStack.resize(width, height);
                 });
-                hopper.clear();
+                ppStack.bind();
 
                 spaceCamera.setAspectRatio(hopper.getAspect());
                 spaceCamera.update(dt);
@@ -407,8 +349,6 @@
                     ball.draw();
                 }
 
-                hopper.setDepthMask(false);
-
                 cubemapProgram.use();
                 cubemapProgram.setCubemapTexture(cubemapTexture);
                 cubemapProgram.updateProjection(projection);
@@ -416,23 +356,7 @@
                 cubemapProgram.updateGamma(2.2);
                 cubemapProgram.draw();
 
-                hopper.setDepthMask(true);
-
-                framebufferMS.unbind();
-                framebufferMS.bindRead();
-                framebuffer.bindDraw();
-
-                hopper.clear();
-                hopper.blit(hopper.getWidth(), hopper.getHeight());
-
-                framebuffer.unbind();
-
-                hopper.clear();
-
-                hopper.disableDepth();
-                ppProgram.use();
-                ppProgram.setTexture(colorAttachment);
-                ppProgram.draw();
+                ppStack.unbind();
             });
         }
         catch (e) {
