@@ -247,7 +247,7 @@
 
                 phongProgram.use();
 
-                phongProgram.updateGamma(2.2);
+                phongProgram.updateGamma(ppStack.getGamma());
 
                 phongProgram.updateProjection(projection);
 
@@ -353,7 +353,7 @@
                 cubemapProgram.setCubemapTexture(cubemapTexture);
                 cubemapProgram.updateProjection(projection);
                 cubemapProgram.updateView(view);
-                cubemapProgram.updateGamma(2.2);
+                cubemapProgram.updateGamma(ppStack.getGamma());
                 cubemapProgram.draw();
 
                 ppStack.unbind();
