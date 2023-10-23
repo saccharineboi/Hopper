@@ -4829,8 +4829,15 @@ const Hopper = ({
             requestAnimationFrame(animate);
         },
 
-        clear: () => gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT),
-        clearColor: color => gl.clearColor(color.getR(), color.getG(), color.getB(), color.getA()),
+        clearColor: () => gl.clear(gl.COLOR_BUFFER_BIT),
+        clearColorDepth: () => gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT),
+        clearColorDepthStencil: () => gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT),
+        clearDepth: () => gl.clear(gl.DEPTH_BUFFER_BIT),
+        clearDepthStencil: () => gl.clear(gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT),
+        clearStencil: () => gl.clear(gl.STENCIL_BUFFER_BIT),
+        clearColorStencil: () => gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT),
+
+        setClearColor: color => gl.clearColor(color.getR(), color.getG(), color.getB(), color.getA()),
 
         enableDepth: () => gl.enable(gl.DEPTH_TEST),
         enableStencil: () => gl.enable(gl.STENCIL_TEST),
@@ -5864,6 +5871,7 @@ const Hopper = ({
             prog.halt();
             if (version === 2) {
                 return Object.freeze({
+                    getProgram: () => prog,
                     getID: () => prog.getID(),
                     use: () => prog.use(),
                     halt: () => prog.halt(),
@@ -5906,6 +5914,7 @@ const Hopper = ({
             });
 
             return Object.freeze({
+                getProgram: () => prog,
                 getID: () => prog.getID(),
                 use: () => prog.use(),
                 halt: () => prog.halt(),
@@ -5918,6 +5927,77 @@ const Hopper = ({
                     quadMesh.bind();
                     quadMesh.draw();
                     quadMesh.unbind();
+                }
+            });
+        },
+
+        createPostProcessStack: (hopper, samples) => {
+            const ppProgram = hopper.createPostProcessProgram();
+            const ppProgramRaw = ppProgram.getProgram();
+
+            const framebufferMS = hopper.createFramebuffer();
+            const colorAttachmentMS = hopper.createColorAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), samples);
+            const depthStencilAttachmentMS = hopper.createDepthStencilAttachmentAsRenderbufferMS(hopper.getWidth(), hopper.getHeight(), samples);
+
+            framebufferMS.bind();
+            framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+            framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+            if (!framebufferMS.isComplete()) {
+                throw Exception("framebufferMS is incomplete in createPostProcessStack");
+            }
+            framebufferMS.unbind();
+
+            const framebuffer = hopper.createFramebuffer();
+            const colorAttachment = hopper.createColorAttachment(hopper.getWidth(), hopper.getHeight());
+
+            framebuffer.bind();
+            framebuffer.attachColorTexture(colorAttachment);
+            if (!framebuffer.isComplete()) {
+                throw Exception("framebuffer is incomplete in createPostProcessStack");
+            }
+            framebuffer.unbind();
+
+            return Object.freeze({
+                getSamples: () => samples,
+                updateGamma: gamma => ppProgramRaw.uniform1f("uGamma", gamma),
+                resize: (width, height) => {
+                    framebufferMS.clearAttachments();
+                    framebufferMS.delete();
+                    colorAttachmentMS.resize(width, height);
+                    depthStencilAttachmentMS.resize(width, height);
+                    framebufferMS.recreate();
+                    framebufferMS.bind();
+                    framebufferMS.attachColorRenderbuffer(colorAttachmentMS, 0);
+                    framebufferMS.attachDepthStencilRenderbuffer(depthStencilAttachmentMS);
+                    if (!framebufferMS.isComplete()) {
+                        throw Exception("framebufferMS is incomplete in createPostProcessStack:resize");
+                    }
+
+                    framebuffer.clearAttachments();
+                    framebuffer.delete();
+                    colorAttachment.resize(width, height);
+                    framebuffer.recreate();
+                    framebuffer.bind();
+                    framebuffer.attachColorTexture(colorAttachment);
+                    if (!framebuffer.isComplete()) {
+                        throw Exception("framebuffer is incomplete in createPostProcessStack:resize");
+                    }
+                },
+                bind: () => {
+                    framebufferMS.bind();
+                    hopper.clearColorDepthStencil();
+                },
+                unbind: () => {
+                    framebufferMS.bindRead();
+                    framebuffer.bindDraw();
+                    hopper.clearColor();
+                    hopper.blit(hopper.getWidth(), hopper.getHeight());
+                    framebuffer.unbind();
+                    hopper.clearColor();
+
+                    ppProgram.use();
+                    ppProgram.setTexture(colorAttachment);
+                    ppProgram.draw();
                 }
             });
         },
