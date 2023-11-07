@@ -10,7 +10,7 @@
 <h1>Description:</h1> Hopper is a WebGL 1.0 & 2.0 Renderer written in a single file. See <a href="https://github.com/saccharineboi/Hopper/blob/main/src/renderer.js">src/renderer.js</a>.
 <br>
 <h1>Demo:</h1>
-Open <a href="https://saccharineboi.github.io/projects/hopper_playground.html" target="_blank">Hopper Playground</a> to play with one of the demos.
+Open <a href="https://saccharineboi.github.io/projects/playground.html" target="_blank">Hopper Playground</a> to play with one of the demos.
 <h1>Features:</h1>
 <ul>
   <li>Uses WebGL 2.0 by default, automatically falls back to WebGL 1.0 when needed</li>
