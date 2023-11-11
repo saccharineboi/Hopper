@@ -567,7 +567,10 @@ const Quat = (x = 0, y = 0, z = 0, w = 1) => Object.freeze({
 
     inv: () => {
         const dotsum = x * x + y * y + z * z + w * w;
-        if (!Common.floatEquals(dotsum, 0.0)) {
+        if (Common.floatEquals(dotsum, 1.0)) {
+            return Quat(-x, -y, -z, w);
+        }
+        else if (!Common.floatEquals(dotsum, 0.0)) {
             const invdot = 1.0 / dotsum;
             return Quat(-x * invdot,
                         -y * invdot,
