@@ -1983,7 +1983,7 @@ const GEN_INCLUDE_PHONG_SHADER_SPOT_LIGHT = version => version === 2 ? `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_SHADER_COMPUTE_DIR_LIGHT = `
-    vec3 computeDirLight(vec3 normal, vec3 pixelPos)
+    vec3 computeDirLight(vec3 normal, vec3 pixelPos, vec3 viewDir)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_DIR_LIGHTS}; ++i) {
@@ -1993,7 +1993,6 @@ const INCLUDE_PHONG_SHADER_COMPUTE_DIR_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uDirLightDiffuse[i] * uPhongMatDiffuse;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uDirLightSpecular[i] * uPhongMatSpecular;
@@ -2006,7 +2005,7 @@ const INCLUDE_PHONG_SHADER_COMPUTE_DIR_LIGHT = `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_DIR_LIGHT = `
-    vec3 computeDirLight(vec3 normal, vec3 pixelPos, vec3 ambientTex, vec3 diffuseTex, vec3 specularTex)
+    vec3 computeDirLight(vec3 normal, vec3 pixelPos, vec3 viewDir, vec3 ambientTex, vec3 diffuseTex, vec3 specularTex)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_DIR_LIGHTS}; ++i) {
@@ -2016,7 +2015,6 @@ const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_DIR_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uDirLightDiffuse[i] * uPhongMatDiffuse * diffuseTex;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uDirLightSpecular[i] * uPhongMatSpecular * specularTex;
@@ -2029,7 +2027,7 @@ const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_DIR_LIGHT = `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_SHADER_COMPUTE_POINT_LIGHT = `
-    vec3 computePointLight(vec3 normal, vec3 pixelPos)
+    vec3 computePointLight(vec3 normal, vec3 pixelPos, vec3 viewDir)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_POINT_LIGHTS}; ++i) {
@@ -2037,7 +2035,6 @@ const INCLUDE_PHONG_SHADER_COMPUTE_POINT_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uPointLightDiffuse[i] * uPhongMatDiffuse;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uPointLightSpecular[i] * uPhongMatSpecular;
@@ -2053,7 +2050,7 @@ const INCLUDE_PHONG_SHADER_COMPUTE_POINT_LIGHT = `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_POINT_LIGHT = `
-    vec3 computePointLight(vec3 normal, vec3 pixelPos, vec3 diffuseTex, vec3 specularTex)
+    vec3 computePointLight(vec3 normal, vec3 pixelPos, vec3 viewDir, vec3 diffuseTex, vec3 specularTex)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_POINT_LIGHTS}; ++i) {
@@ -2061,7 +2058,6 @@ const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_POINT_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uPointLightDiffuse[i] * uPhongMatDiffuse * diffuseTex;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uPointLightSpecular[i] * uPhongMatSpecular * specularTex;
@@ -2077,7 +2073,7 @@ const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_POINT_LIGHT = `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_SHADER_COMPUTE_SPOT_LIGHT = `
-    vec3 computeSpotLight(vec3 normal, vec3 pixelPos)
+    vec3 computeSpotLight(vec3 normal, vec3 pixelPos, vec3 viewDir)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_SPOT_LIGHTS}; ++i) {
@@ -2089,7 +2085,6 @@ const INCLUDE_PHONG_SHADER_COMPUTE_SPOT_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uSpotLightDiffuse[i] * uPhongMatDiffuse;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uSpotLightSpecular[i] * uPhongMatSpecular;
@@ -2105,7 +2100,7 @@ const INCLUDE_PHONG_SHADER_COMPUTE_SPOT_LIGHT = `
 
 //////////////////////////////////////////////////
 const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_SPOT_LIGHT = `
-    vec3 computeSpotLight(vec3 normal, vec3 pixelPos, vec3 diffuseTex, vec3 specularTex)
+    vec3 computeSpotLight(vec3 normal, vec3 pixelPos, vec3 viewDir, vec3 diffuseTex, vec3 specularTex)
     {
         vec3 result = vec3(0.0);
         for (int i = 0; i < ${MAX_SPOT_LIGHTS}; ++i) {
@@ -2117,7 +2112,6 @@ const INCLUDE_PHONG_TEXTURE_SHADER_COMPUTE_SPOT_LIGHT = `
             float diff = max(dot(normal, lightDir), 0.0);
             vec3 diffuse = diff * uSpotLightDiffuse[i] * uPhongMatDiffuse * diffuseTex;
 
-            vec3 viewDir = normalize(-pixelPos);
             vec3 halfwayDir = normalize(lightDir + viewDir);
             float spec = pow(max(dot(normal, halfwayDir), 0.0), uPhongMatShininess);
             vec3 specular = spec * uSpotLightSpecular[i] * uPhongMatSpecular * specularTex;
@@ -2163,10 +2157,11 @@ const GEN_PHONG_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(version)}
 #endif
 
         vec3 normal = normalize(v_norm);
+        vec3 viewDir = normalize(-v_pos);
 
-        output_color.rgb += computeDirLight(normal, v_pos);
-        output_color.rgb += computePointLight(normal, v_pos);
-        output_color.rgb += computeSpotLight(normal, v_pos);
+        output_color.rgb += computeDirLight(normal, v_pos, viewDir);
+        output_color.rgb += computePointLight(normal, v_pos, viewDir);
+        output_color.rgb += computeSpotLight(normal, v_pos, viewDir);
 
 #if __VERSION__ == 300
         output_color = ApplyFog(output_color);
@@ -2225,10 +2220,11 @@ const GEN_PHONG_TEXTURE_SHADER_FRAG = (gl, version) => `${GEN_SHADER_VERSION(ver
         vec3 specularTexColor = ApplyGammaCorrection(texture2D(uSpecularTexture, v_specular_texcoord)).rgb;
 #endif
         vec3 normal = normalize(v_norm);
+        vec3 viewDir = normalize(-v_pos);
 
-        output_color.rgb += computeDirLight(normal, v_pos, ambientTexColor, diffuseTexColor, specularTexColor);
-        output_color.rgb += computePointLight(normal, v_pos, diffuseTexColor, specularTexColor);
-        output_color.rgb += computeSpotLight(normal, v_pos, diffuseTexColor, specularTexColor);
+        output_color.rgb += computeDirLight(normal, v_pos, viewDir, ambientTexColor, diffuseTexColor, specularTexColor);
+        output_color.rgb += computePointLight(normal, v_pos, viewDir, diffuseTexColor, specularTexColor);
+        output_color.rgb += computeSpotLight(normal, v_pos, viewDir, diffuseTexColor, specularTexColor);
 
 #if __VERSION__ == 300
         output_color = ApplyFog(output_color);
